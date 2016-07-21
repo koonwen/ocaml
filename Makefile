@@ -329,6 +329,7 @@ utils/config.ml: utils/config.mlp config/Makefile Makefile
 	    $(call SUBST,CC) \
 	    $(call SUBST,CCOMPTYPE) \
 	    $(call SUBST,CC_PROFILE) \
+			$(call SUBST,CMX_CONTAINS_ALL_CODE) \
 	    $(call SUBST,OUTPUTOBJ) \
 	    $(call SUBST,EXT_ASM) \
 	    $(call SUBST,EXT_DLL) \
