@@ -157,6 +157,7 @@ AC_SUBST([flambda_invariants])
 AC_SUBST([max_testsuite_dir_retries])
 AC_SUBST([windows_unicode])
 AC_SUBST([flat_float_array])
+AC_SUBST([lto])
 AC_SUBST([afl])
 AC_SUBST([force_safe_string])
 AC_SUBST([default_safe_string])
@@ -297,6 +298,10 @@ AC_ARG_ENABLE([flambda],
 AC_ARG_ENABLE([flambda-invariants],
   [AS_HELP_STRING([--enable-flambda-invariants],
     [enable invariants checks in flambda])])
+
+AC_ARG_ENABLE([lto],
+  [AS_HELP_STRING([--enable-lto],
+    [enable lto optimizations])])
 
 AC_ARG_WITH([target-bindir],
   [AS_HELP_STRING([--with-target-bindir],
@@ -1726,6 +1731,10 @@ AS_IF([test x"$enable_flambda" = "xyes"],
     [flambda_invariants=false])],
   [flambda=false
   flambda_invariants=false])
+
+AS_IF([test x"$enable_lto" = "xno"],
+  [lto=false],
+  [lto=true])
 
 AS_IF([test x"$enable_flat_float_array" = "xno"],
   [flat_float_array=false],

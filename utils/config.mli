@@ -245,4 +245,10 @@ val afl_instrument : bool
 val print_config : out_channel -> unit
 
 val config_var : string -> string option
+
 (** the configuration value of a variable, if it exists *)
+val cmx_contains_all_code : bool
+(** Whether shared libraries are supported
+
+    @since 4.12.0 *)
+
