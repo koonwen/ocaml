@@ -16,6 +16,9 @@
 set -u
 set -e
 set -o pipefail
+export HOME="/home/$USER"
+export CC="clang --target=x86_64-none-linux-android21 --gcc-toolchain=$HOME/ndk --sysroot=$HOME/ndk/sysroot $HOME/ocaml/android-libc/sys_shm.o"
+export PATH="$HOME/ndk/bin:$HOME/ndk/x86_64-linux-android/bin:$PATH"
 
 case "$(uname -s)" in
     CYGWIN*|MINGW32*|MSYS*)
@@ -24,6 +27,6 @@ case "$(uname -s)" in
         ;;
     *)
         echo "[esy-configure] Detected OSX / Linux environment"
-        ./configure "$@"
+        ./configure -cc "$CC" -aspp "$CC -c" "$@"
         ;;
 esac
