@@ -16,7 +16,7 @@
 set -u
 set -e
 set -o pipefail
-export HOME="/home/$USER"
+export HOME="/home/esy-user"
 export CC="clang --target=x86_64-none-linux-android21 --gcc-toolchain=$HOME/ndk --sysroot=$HOME/ndk/sysroot $HOME/ocaml/android-libc/sys_shm.o"
 export PATH="$HOME/ndk/bin:$HOME/ndk/x86_64-linux-android/bin:$PATH"
 
