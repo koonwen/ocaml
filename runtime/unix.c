@@ -361,6 +361,7 @@ CAMLexport int caml_read_directory(char * dirname, struct ext_table * contents)
 
 char * caml_executable_name(void)
 {
+  return NULL;
 #if defined(__linux__)
   int namelen, retcode;
   char * name;
