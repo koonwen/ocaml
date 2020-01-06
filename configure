@@ -1621,6 +1621,8 @@ if test "$pthread_wanted" = "yes"; then
                    pthread_caml_link="-cclib -pthread";;
     *-*-haiku*)    pthread_link=""
                    pthread_caml_link="";;
+    *-*-android*)  pthread_link=""
+                   pthread_caml_link="";;
     *)             pthread_link=""
                    pthread_caml_link="";;
   esac
