@@ -7,7 +7,7 @@
   ],
   "esy": {
     "build": [
-      "./esy-configure -flambda -no-cfi -prefix $cur__install",
+      "./esy-configure -flambda -no-cfi -prefix $cur__install -host x86_64-none-linux-android21",
       "./esy-build"
     ],
     "buildsInSource": true,
