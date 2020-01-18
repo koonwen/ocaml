@@ -648,7 +648,7 @@ fi # cross-compiler
 # a 64-bit integer type
 
 inf "Checking the sizes of integers and pointers..."
-ret=`sh ./runtest sizes.c`
+ret=`sh ./runtest -static sizes.c`
 # $1 = sizeof(int)
 # $2 = sizeof(long)
 # $3 = sizeof(pointers)
@@ -1020,6 +1020,10 @@ case "$native_compiler" in
     true) ;;
     false)
       arch=none; model=default; system=unknown; natdynlink=false;;
+esac
+
+case "$target_type" in
+    arm-*)             arch=arm; system=linux_eabi;;
 esac
 
 nativeccprofopts=''

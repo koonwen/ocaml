@@ -1,0 +1,19 @@
+PATH=$cur__bin:$PATH
+
+make clean
+./esy-configure -no-cfi -prefix $cur__install
+./esy-build
+make install
+
+make clean
+./esy-configure \
+  --target arm-unknown-linux-gnueabi \
+  -prefix $cur__install \
+  -no-ocamldoc \
+  -no-debugger \
+  -no-cfi \
+  -target-bindir $cur__bin
+make -j12 world
+make -j12 opt
+cp $cur__bin/ocamlrun byterun
+make install
