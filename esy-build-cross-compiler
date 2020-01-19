@@ -1,0 +1,18 @@
+#! /bin/bash
+
+set -u
+set -e
+set -o pipefail
+
+./esy-configure \
+  -target $ESY_CROSS_COMPILER_TARGET \
+  -prefix $cur__install \
+  -flambda \
+  -no-ocamldoc \
+  -no-debugger \
+  -no-cfi \
+  -target-bindir $(dirname $(which ocamlrun))
+make -j8 world
+make -j8 opt
+cp $(which ocamlrun) byterun
+make install

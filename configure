@@ -648,7 +648,10 @@ fi # cross-compiler
 # a 64-bit integer type
 
 inf "Checking the sizes of integers and pointers..."
-ret=`sh ./runtest sizes.c`
+
+# -static here because if you have qemu and binfmt it should works
+# also if are on a docker on mac, this should works also
+ret=`sh ./runtest -static sizes.c`
 # $1 = sizeof(int)
 # $2 = sizeof(long)
 # $3 = sizeof(pointers)
