@@ -6,11 +6,14 @@ set -o pipefail
 
 ./esy-configure \
   -target $ESY_CROSS_COMPILER_TARGET \
+  -host $ESY_CROSS_COMPILER_HOST \
   -prefix $cur__install \
   -flambda \
   -no-ocamldoc \
   -no-debugger \
   -no-cfi \
+  -cc "$ESY_CROSS_COMPILER_CC" \
+  -aspp "$ESY_CROSS_COMPILER_CC -c" \
   -target-bindir $(dirname $(which ocamlrun))
 make -j8 world
 make -j8 opt

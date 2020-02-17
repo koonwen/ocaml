@@ -1,5 +1,5 @@
 {
-  "name": "ocaml",
+  "name": "ocaml-native",
   "version": "4.7.1004",
   "description": "OCaml Compiler as an esy npm Package",
   "versionNotes": [
@@ -7,27 +7,24 @@
   ],
   "esy": {
     "build": [
-      "./esy-build-cross-compiler"
+      "./esy-configure -flambda -no-cfi -prefix $cur__install",
+      "./esy-build"
     ],
     "buildsInSource": true,
     "exportedEnv": {
       "OCAMLLIB": {
-        "val": "#{ocaml.lib / 'ocaml'}",
+        "val": "#{ocaml-native.lib / 'ocaml'}",
         "scope": "global"
       },
       "CAML_LD_LIBRARY_PATH": {
-        "val": "#{ocaml.lib / 'ocaml' / 'stublibs' : ocaml.lib / 'ocaml' : $CAML_LD_LIBRARY_PATH}",
+        "val": "#{ocaml-native.lib / 'ocaml' / 'stublibs' : ocaml-native.lib / 'ocaml' : $CAML_LD_LIBRARY_PATH}",
         "scope": "global"
       },
       "OCAML_TOPLEVEL_PATH": {
-        "val": "#{ocaml.lib / 'ocaml'}",
+        "val": "#{ocaml-native.lib / 'ocaml'}",
         "scope": "global"
       }
     }
-  },
-  "dependencies": {
-    "ocaml-native": "*",
-    "esy-cross-compiler": "*"
   },
   "repository": {
     "type": "git",
