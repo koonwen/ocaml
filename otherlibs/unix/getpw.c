@@ -29,10 +29,11 @@ static value alloc_passwd_entry(struct passwd *entry)
 
   Begin_roots5 (name, passwd, gecos, dir, shell);
     name = caml_copy_string(entry->pw_name);
-    passwd = caml_copy_string(entry->pw_passwd);
 #if !defined(__BEOS__) && !defined(__ANDROID__)
+    passwd = caml_copy_string(entry->pw_passwd);
     gecos = caml_copy_string(entry->pw_gecos);
 #else
+    passwd = caml_copy_string("");
     gecos = caml_copy_string("");
 #endif
     dir = caml_copy_string(entry->pw_dir);
