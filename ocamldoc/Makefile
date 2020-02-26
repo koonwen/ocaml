@@ -62,7 +62,7 @@ ifeq "$(UNIX_OR_WIN32)" "unix"
       OCAMLDOC_RUN=./$(OCAMLDOC)
     endif
   else
-    OCAMLDOC_RUN=$(OCAMLRUN) ./$(OCAMLDOC)
+    OCAMLDOC_RUN=./$(OCAMLDOC)
   endif
 else # Windows
   OCAMLDOC_RUN = CAML_LD_LIBRARY_PATH="../otherlibs/win32unix;../otherlibs/str" $(OCAMLRUN) ./$(OCAMLDOC)
