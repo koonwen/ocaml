@@ -26,7 +26,6 @@
     }
   },
   "dependencies": {
-    "ocaml-native": "*",
     "esy-cross-compiler": "*"
   },
   "repository": {

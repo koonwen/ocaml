@@ -367,11 +367,7 @@ else
 fi
 inf "Configuring for target $target ..."
 
-if [ x"$host" = x"$target" ]; then
-  cross_compiler=false
-else
-  cross_compiler=true
-fi
+cross_compiler=false
 
 # Do we have gcc?
 
@@ -998,6 +994,7 @@ case "$target" in
   arm*-*-openbsd*)              arch=arm; system=bsd;;
   zaurus*-*-openbsd*)           arch=arm; system=bsd;;
   x86_64-*-linux*)              arch=amd64; system=linux;;
+  x86_64-linux*)              arch=amd64; system=linux;;
   x86_64-*-gnu*)                arch=amd64; system=gnu;;
   x86_64-*-dragonfly*)          arch=amd64; system=dragonfly;;
   x86_64-*-freebsd*)            arch=amd64; system=freebsd;;
