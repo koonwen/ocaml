@@ -867,7 +867,7 @@ if $with_sharedlibs; then
       common_cflags="$dl_defs $common_cflags"
       dl_needs_underscore=false
       shared_libraries_supported=true;;
-    *-*-linux*|*-*-freebsd[3-9]*|*-*-freebsd[1-9][0-9]*\
+    *-*-linux*|*-linux*|*-*-freebsd[3-9]*|*-*-freebsd[1-9][0-9]*\
     |*-*-openbsd*|*-*-netbsd*|*-*-dragonfly*|*-*-gnu*|*-*-haiku*)
       sharedcccompopts="-fPIC"
       mksharedlib="$cc -shared"
@@ -904,6 +904,7 @@ if $with_sharedlibs; then
     i[3456]86-*-linux*)           natdynlink=true;;
     i[3456]86-*-gnu*)             natdynlink=true;;
     x86_64-*-linux*)              natdynlink=true;;
+    x86_64-linux*)              natdynlink=true;;
     i[3456]86-*-darwin[89].*)     natdynlink=true;;
     i[3456]86-*-darwin*)
       if test $arch64 == true; then
@@ -924,8 +925,10 @@ if $with_sharedlibs; then
     i386-*-gnu0.3)                natdynlink=true;;
     i[3456]86-*-haiku*)           natdynlink=true;;
     arm*-*-linux*)                natdynlink=true;;
+    arm*-linux*)                natdynlink=true;;
     arm*-*-freebsd*)              natdynlink=true;;
     earm*-*-netbsd*)              natdynlink=true;;
+    aarch64-linux*)             natdynlink=true;;
     aarch64-*-linux*)             natdynlink=true;;
   esac
 fi
@@ -983,6 +986,7 @@ case "$target" in
   armv8*-*-linux-gnueabihf)     arch=arm; model=armv8; system=linux_eabihf;;
   armv8*-*-linux-gnueabi)       arch=arm; model=armv8; system=linux_eabi;;
   armv7*-*-linux-gnueabi)       arch=arm; model=armv7; system=linux_eabi;;
+  armv7*-linux-androideabi)       arch=arm; model=armv7; system=linux_eabi;;
   armv6t2*-*-linux-gnueabi)     arch=arm; model=armv6t2; system=linux_eabi;;
   armv6*-*-linux-gnueabi)       arch=arm; model=armv6; system=linux_eabi;;
   armv6*-*-freebsd*)            arch=arm; model=armv6; system=freebsd;;
@@ -991,6 +995,7 @@ case "$target" in
   armv5te*-*-linux-gnueabi)     arch=arm; model=armv5te; system=linux_eabi;;
   armv5*-*-linux-gnueabi)       arch=arm; model=armv5; system=linux_eabi;;
   arm*-*-linux-gnueabi)         arch=arm; system=linux_eabi;;
+  arm*-linux-androideabi)         arch=arm; system=linux_eabi;;
   arm*-*-openbsd*)              arch=arm; system=bsd;;
   zaurus*-*-openbsd*)           arch=arm; system=bsd;;
   x86_64-*-linux*)              arch=amd64; system=linux;;
@@ -1003,6 +1008,7 @@ case "$target" in
   x86_64-*-darwin*)             arch=amd64; system=macosx;;
   x86_64-*-mingw*)              arch=amd64; system=mingw;;
   aarch64-*-linux*)             arch=arm64; system=linux;;
+  aarch64-linux*)             arch=arm64; system=linux;;
   x86_64-*-cygwin*)             arch=amd64; system=cygwin;;
 esac
 
@@ -1902,7 +1908,7 @@ fi
 
 if test "$with_frame_pointers" = "true"; then
   case "$target,$cc" in
-    x86_64-*-linux*,gcc*|x86_64-*-linux*,clang*)
+    x86_64-*-linux*,gcc*|x86_64-*-linux*,clang*|x86_64-linux*,clang*)
        common_cflags="$common_cflags -g  -fno-omit-frame-pointer"
        echo "#define WITH_FRAME_POINTERS" >> m.h
        ;;

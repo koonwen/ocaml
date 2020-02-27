@@ -7,7 +7,8 @@
   ],
   "esy": {
     "build": [
-      "./esy-build-cross-compiler"
+      "cp #{esy-cross-compiler.lib / 'cross-build.sh'} cross-build",
+      "./cross-build"
     ],
     "buildsInSource": true,
     "exportedEnv": {
