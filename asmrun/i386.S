@@ -67,7 +67,7 @@
         pushl %eax; CFI_ADJUST(4); \
         pushl %ecx; CFI_ADJUST(4); \
         pushl %edx; CFI_ADJUST(4); \
-        call mcount; \
+        CALL_VAR(mcount); \
         popl %edx; CFI_ADJUST(-4); \
         popl %ecx; CFI_ADJUST(-4); \
         popl %eax; CFI_ADJUST(-4); \
@@ -75,7 +75,7 @@
 #define PROFILE_C \
         pushl %ebp; CFI_ADJUST(4); \
         movl %esp, %ebp; \
-        call mcount; \
+        CALL_VAR(mcount); \
         popl %ebp; CFI_ADJUST(-4)
 #elif defined(SYS_bsd_elf)
 #define PROFILE_CAML \
@@ -84,7 +84,7 @@
         pushl %eax; CFI_ADJUST(4); \
         pushl %ecx; CFI_ADJUST(4); \
         pushl %edx; CFI_ADJUST(4); \
-        call .mcount; \
+        CALL_VAR(.mcount); \
         popl %edx; CFI_ADJUST(-4); \
         popl %ecx; CFI_ADJUST(-4); \
         popl %eax; CFI_ADJUST(-4); \
@@ -92,7 +92,7 @@
 #define PROFILE_C \
         pushl %ebp; CFI_ADJUST(4); \
         movl %esp, %ebp; \
-        call .mcount; \
+        CALL_VAR(.mcount); \
         popl %ebp; CFI_ADJUST(-4)
 #elif defined(SYS_macosx)
 #define PROFILE_CAML \
@@ -101,7 +101,7 @@
         pushl %eax; CFI_ADJUST(4); \
         pushl %ecx; CFI_ADJUST(4); \
         pushl %edx; CFI_ADJUST(4); \
-        call Lmcount$stub;  \
+        CALL_VAR(Lmcount$stub);  \
         popl %edx; CFI_ADJUST(-4); \
         popl %ecx; CFI_ADJUST(-4); \
         popl %eax; CFI_ADJUST(-4); \
@@ -109,12 +109,116 @@
 #define PROFILE_C \
         pushl %ebp; CFI_ADJUST(4); \
         movl %esp, %ebp; \
-        call Lmcount$stub; \
+        CALL_VAR(Lmcount$stub); \
         popl %ebp; CFI_ADJUST(-4)
 #endif
 #else
 #define PROFILE_CAML
 #define PROFILE_C
+#endif
+
+LBL(get_current_ip):
+	calll LBL(inner_get_current_ip)
+	addl	$_GLOBAL_OFFSET_TABLE_, %ebx
+	ret
+	LBL(inner_get_current_ip):
+		movl (%esp), %ebx
+		ret
+
+#if defined(__PIC__)
+
+#define CALL_VAR(label) \
+        pushl   %ebx; \
+        calll   LBL(get_current_ip); \
+        call    *G(label)@GOT(%ebx); \
+        popl    %ebx;
+
+/* Store [srcreg] in global [dstlabel]. */
+#define STORE_VAR(srcreg, dstlabel) \
+        pushl   srcreg ; CFI_ADJUST(4) \
+        pushl   %ebx ; CFI_ADJUST(4) \
+        calll   LBL(get_current_ip) ; \
+        movl    G(dstlabel)@GOT(%ebx), %ebx ; \
+        addl    $4, %esp ; CFI_ADJUST(-4) \
+        popl    (%ebx) ; CFI_ADJUST(-4) \
+        subl    $8, %esp ; CFI_ADJUST(8) \
+        popl    %ebx ; CFI_ADJUST(-4) \
+        popl    srcreg ; CFI_ADJUST(-4)
+
+#define PUSH_VAR(srclabel) \
+        pushl   %ebx ; CFI_ADJUST(4) \
+        calll   LBL(get_current_ip) ; \
+        movl    G(srclabel)@GOT(%ebx), %ebx ; \
+        movl    (%ebx), %ebx ; \
+        xchgl   (%esp), %ebx ; /* so %ebx is restored and (%esp) contains the value */
+
+/* Load global [srclabel] in register [dstreg]. */
+#define LOAD_VAR(srclabel, dstreg) \
+        PUSH_VAR(srclabel) ; \
+        popl dstreg ; CFI_ADJUST(-4)
+
+#define CMP_VAR(label, reg) \
+        pushl   %ebx ; CFI_ADJUST(4) \
+        calll   LBL(get_current_ip) ; \
+        movl    G(label)@GOT(%ebx), %ebx ; \
+        cmpl    (%ebx), reg ; \
+        popl    %ebx ; CFI_ADJUST(-4)
+
+#define POP_VAR(dstlabel) \
+        xchgl   (%esp), %ebx ; \
+        pushl   %ebx ; CFI_ADJUST(4) \
+        calll   LBL(get_current_ip) ; \
+        movl    G(dstlabel)@GOT(%ebx), %ebx ; \
+        popl    (%ebx) ; CFI_ADJUST(-4) ; \
+        popl    %ebx ; CFI_ADJUST(-4)
+
+#define LEA_VAR(label, dst) \
+        pushl   %ebx ; CFI_ADJUST(4) \
+        calll   LBL(get_current_ip) ; \
+        movl    G(label)@GOT(%ebx), %ebx ; \
+        xchgl   (%esp), %ebx ; /* so %ebx is restored and (%esp) contains the address */ \
+        popl    dst ; CFI_ADJUST(-4)
+
+/* Subtract global [srclabel] of register [dstreg]. */
+#define SUB_VAR(srclabel, dstreg) \
+        PUSH_VAR(srclabel) ; \
+        addl    $4, %esp ; CFI_ADJUST(-4) \
+        subl    -4(%esp), dstreg ;
+
+#define TESTL_VAR(imm, label) \
+        PUSH_VAR(label) ; \
+        addl    $4, %esp ; \
+        testl   imm, -4(%esp)
+
+#else
+
+#define CALL_VAR(label) \
+        call   G(label)
+
+#define STORE_VAR(srcreg, dstlabel) \
+        movl    srcreg, G(dstlabel)
+
+#define LOAD_VAR(srclabel, dstreg) \
+        movl    G(srclabel), dstreg
+
+#define CMP_VAR(label, reg) \
+        cmpl    G(label), %eax
+
+#define PUSH_VAR(srclabel) \
+        pushl   G(srclabel); CFI_ADJUST(4)
+
+#define POP_VAR(dstlabel) \
+        popl    G(dstlabel); CFI_ADJUST(-4)
+
+#define LEA_VAR(label, dst) \
+        leal    G(label), dst
+
+#define SUB_VAR(srclabel, dstreg) \
+        subl    G(caml_young_ptr), dstreg
+
+#define TESTL_VAR(imm, label) \
+        testl   imm, G(label)
+
 #endif
 
 /* PR#6038: GCC and Clang seem to require 16-byte alignment nowadays,
@@ -133,9 +237,9 @@ FUNCTION(caml_call_gc)
         PROFILE_CAML
     /* Record lowest stack address and return address */
         movl    0(%esp), %eax
-        movl    %eax, G(caml_last_return_address)
+        STORE_VAR(%eax, caml_last_return_address)
         leal    4(%esp), %eax
-        movl    %eax, G(caml_bottom_of_stack)
+        STORE_VAR(%eax, caml_bottom_of_stack)
 LBL(105):
 #if !defined(SYS_mingw) && !defined(SYS_cygwin)
     /* Touch the stack to trigger a recoverable segfault
@@ -152,10 +256,10 @@ LBL(105):
         pushl   %ecx; CFI_ADJUST(4)
         pushl   %ebx; CFI_ADJUST(4)
         pushl   %eax; CFI_ADJUST(4)
-        movl    %esp, G(caml_gc_regs)
+        STORE_VAR(%esp, caml_gc_regs)
         /* MacOSX note: 16-alignment of stack preserved at this point */
     /* Call the garbage collector */
-        call    G(caml_garbage_collection)
+        CALL_VAR(caml_garbage_collection)
     /* Restore all regs used by the code generator */
         popl    %eax; CFI_ADJUST(-4)
         popl    %ebx; CFI_ADJUST(-4)
@@ -171,17 +275,17 @@ LBL(105):
 FUNCTION(caml_alloc1)
         CFI_STARTPROC
         PROFILE_CAML
-        movl    G(caml_young_ptr), %eax
+        LOAD_VAR(caml_young_ptr, %eax)
         subl    $8, %eax
-        movl    %eax, G(caml_young_ptr)
-        cmpl    G(caml_young_limit), %eax
+        STORE_VAR(%eax, caml_young_ptr)
+        CMP_VAR(caml_young_limit, %eax)
         jb      LBL(100)
         ret
 LBL(100):
         movl    0(%esp), %eax
-        movl    %eax, G(caml_last_return_address)
+        STORE_VAR(%eax, caml_last_return_address)
         leal    4(%esp), %eax
-        movl    %eax, G(caml_bottom_of_stack)
+        STORE_VAR(%eax, caml_bottom_of_stack)
         ALIGN_STACK(12)
         call    LBL(105)
         UNDO_ALIGN_STACK(12)
@@ -191,17 +295,17 @@ LBL(100):
 FUNCTION(caml_alloc2)
         CFI_STARTPROC
         PROFILE_CAML
-        movl    G(caml_young_ptr), %eax
+        LOAD_VAR(caml_young_ptr, %eax)
         subl    $12, %eax
-        movl    %eax, G(caml_young_ptr)
-        cmpl    G(caml_young_limit), %eax
+        STORE_VAR(%eax, caml_young_ptr)
+        CMP_VAR(caml_young_limit, %eax)
         jb      LBL(101)
         ret
 LBL(101):
         movl    0(%esp), %eax
-        movl    %eax, G(caml_last_return_address)
+        STORE_VAR(%eax, caml_last_return_address)
         leal    4(%esp), %eax
-        movl    %eax, G(caml_bottom_of_stack)
+        STORE_VAR(%eax, caml_bottom_of_stack)
         ALIGN_STACK(12)
         call    LBL(105)
         UNDO_ALIGN_STACK(12)
@@ -211,17 +315,17 @@ LBL(101):
 FUNCTION(caml_alloc3)
         CFI_STARTPROC
         PROFILE_CAML
-        movl    G(caml_young_ptr), %eax
+        LOAD_VAR(caml_young_ptr, %eax)
         subl    $16, %eax
-        movl    %eax, G(caml_young_ptr)
-        cmpl    G(caml_young_limit), %eax
+        STORE_VAR(%eax, caml_young_ptr)
+        CMP_VAR(caml_young_limit, %eax)
         jb      LBL(102)
         ret
 LBL(102):
         movl    0(%esp), %eax
-        movl    %eax, G(caml_last_return_address)
+        STORE_VAR(%eax, caml_last_return_address)
         leal    4(%esp), %eax
-        movl    %eax, G(caml_bottom_of_stack)
+        STORE_VAR(%eax, caml_bottom_of_stack)
         ALIGN_STACK(12)
         call    LBL(105)
         UNDO_ALIGN_STACK(12)
@@ -231,21 +335,27 @@ LBL(102):
 FUNCTION(caml_allocN)
         CFI_STARTPROC
         PROFILE_CAML
-        subl    G(caml_young_ptr), %eax /* eax = size - caml_young_ptr */
+        SUB_VAR(caml_young_ptr, %eax)   /* eax = size - caml_young_ptr */
         negl    %eax                    /* eax = caml_young_ptr - size */
-        cmpl    G(caml_young_limit), %eax
+        CMP_VAR(caml_young_limit, %eax)
         jb      LBL(103)
-        movl    %eax, G(caml_young_ptr)
+        STORE_VAR(%eax, caml_young_ptr)
         ret
 LBL(103):
-        subl    G(caml_young_ptr), %eax /* eax = - size */
+        SUB_VAR(caml_young_ptr, %eax)   /* eax = - size */
         negl    %eax                    /* eax = size */
         pushl   %eax; CFI_ADJUST(4)     /* save desired size */
-        subl    %eax, G(caml_young_ptr) /* must update young_ptr */
+
+        pushl   %ebx
+        LOAD_VAR(caml_young_ptr, %ebx)
+        subl    %eax, %ebx
+        STORE_VAR(%ebx, caml_young_ptr) /* must update young_ptr */
+        popl    %ebx
+
         movl    4(%esp), %eax
-        movl    %eax, G(caml_last_return_address)
+        STORE_VAR(%eax, caml_last_return_address)
         leal    8(%esp), %eax
-        movl    %eax, G(caml_bottom_of_stack)
+        STORE_VAR(%eax, caml_bottom_of_stack)
         ALIGN_STACK(8)
         call    LBL(105)
         UNDO_ALIGN_STACK(8)
@@ -260,9 +370,9 @@ FUNCTION(caml_c_call)
         PROFILE_CAML
     /* Record lowest stack address and return address */
         movl    (%esp), %edx
-        movl    %edx, G(caml_last_return_address)
+        STORE_VAR(%edx, caml_last_return_address)
         leal    4(%esp), %edx
-        movl    %edx, G(caml_bottom_of_stack)
+        STORE_VAR(%edx, caml_bottom_of_stack)
 #if !defined(SYS_mingw) && !defined(SYS_cygwin)
     /* Touch the stack to trigger a recoverable segfault
        if insufficient space remains */
@@ -285,30 +395,30 @@ FUNCTION(caml_start_program)
         pushl   %edi; CFI_ADJUST(4)
         pushl   %ebp; CFI_ADJUST(4)
     /* Initial entry point is caml_program */
-        movl    $ G(caml_program), %esi
+        LEA_VAR(caml_program, %esi)
     /* Common code for caml_start_program and caml_callback* */
 LBL(106):
     /* Build a callback link */
-        pushl   G(caml_gc_regs); CFI_ADJUST(4)
-        pushl   G(caml_last_return_address); CFI_ADJUST(4)
-        pushl   G(caml_bottom_of_stack); CFI_ADJUST(4)
+        PUSH_VAR(caml_gc_regs)
+        PUSH_VAR(caml_last_return_address)
+        PUSH_VAR(caml_bottom_of_stack)
         /* Note: 16-alignment preserved on MacOSX at this point */
     /* Build an exception handler */
         pushl   $ LBL(108); CFI_ADJUST(4)
         ALIGN_STACK(8)
-        pushl   G(caml_exception_pointer); CFI_ADJUST(4)
-        movl    %esp, G(caml_exception_pointer)
+        PUSH_VAR(caml_exception_pointer)
+        STORE_VAR(%esp, caml_exception_pointer)
     /* Call the OCaml code */
         call    *%esi
 LBL(107):
     /* Pop the exception handler */
-        popl    G(caml_exception_pointer); CFI_ADJUST(-4)
+        POP_VAR(caml_exception_pointer)
         addl    $12, %esp       ; CFI_ADJUST(-12)
 LBL(109):
     /* Pop the callback link, restoring the global variables */
-        popl    G(caml_bottom_of_stack); CFI_ADJUST(-4)
-        popl    G(caml_last_return_address); CFI_ADJUST(-4)
-        popl    G(caml_gc_regs); CFI_ADJUST(-4)
+        POP_VAR(caml_bottom_of_stack)
+        POP_VAR(caml_last_return_address)
+        POP_VAR(caml_gc_regs)
     /* Restore callee-save registers. */
         popl    %ebp; CFI_ADJUST(-4)
         popl    %edi; CFI_ADJUST(-4)
@@ -327,15 +437,15 @@ LBL(108):
 
 FUNCTION(caml_raise_exn)
         CFI_STARTPROC
-        testl   $1, G(caml_backtrace_active)
+        TESTL_VAR($1, caml_backtrace_active)
         jne     LBL(110)
-        movl    G(caml_exception_pointer), %esp
-        popl    G(caml_exception_pointer); CFI_ADJUST(-4)
+        LOAD_VAR(caml_exception_pointer, %esp)
+        POP_VAR(caml_exception_pointer)
         UNDO_ALIGN_STACK(8)
         ret
 LBL(110):
         movl    %eax, %esi          /* Save exception bucket in esi */
-        movl    G(caml_exception_pointer), %edi /* SP of handler */
+        LOAD_VAR(caml_exception_pointer, %edi)  /* SP of handler */
         movl    0(%esp), %eax       /* PC of raise */
         leal    4(%esp), %edx       /* SP of raise */
         ALIGN_STACK(12)
@@ -343,10 +453,10 @@ LBL(110):
         pushl   %edx; CFI_ADJUST(4)         /* arg 3: sp of raise */
         pushl   %eax; CFI_ADJUST(4)         /* arg 2: pc of raise */
         pushl   %esi; CFI_ADJUST(4)         /* arg 1: exception bucket */
-        call    G(caml_stash_backtrace)
+        CALL_VAR(caml_stash_backtrace)
         movl    %esi, %eax              /* Recover exception bucket */
         movl    %edi, %esp
-        popl    G(caml_exception_pointer); CFI_ADJUST(-4)
+        POP_VAR(caml_exception_pointer)
         UNDO_ALIGN_STACK(8)
         ret
         CFI_ENDPROC
@@ -356,24 +466,24 @@ LBL(110):
 FUNCTION(caml_raise_exception)
         CFI_STARTPROC
         PROFILE_C
-        testl   $1, G(caml_backtrace_active)
+        TESTL_VAR($1, caml_backtrace_active)
         jne     LBL(112)
         movl    4(%esp), %eax
-        movl    G(caml_exception_pointer), %esp
-        popl    G(caml_exception_pointer); CFI_ADJUST(-4)
+        LOAD_VAR(caml_exception_pointer, %esp)
+        POP_VAR(caml_exception_pointer)
         UNDO_ALIGN_STACK(8)
         ret
 LBL(112):
         movl    4(%esp), %esi          /* Save exception bucket in esi */
         ALIGN_STACK(12)
-        pushl   G(caml_exception_pointer); CFI_ADJUST(4)  /* 4: sp of handler */
-        pushl   G(caml_bottom_of_stack); CFI_ADJUST(4)    /* 3: sp of raise */
-        pushl   G(caml_last_return_address); CFI_ADJUST(4)/* 2: pc of raise */
+        PUSH_VAR(caml_exception_pointer)  /* 4: sp of handler */
+        PUSH_VAR(caml_bottom_of_stack)    /* 3: sp of raise */
+        PUSH_VAR(caml_last_return_address)/* 2: pc of raise */
         pushl   %esi; CFI_ADJUST(4)                    /* 1: exception bucket */
-        call    G(caml_stash_backtrace)
+        CALL_VAR(caml_stash_backtrace)
         movl    %esi, %eax              /* Recover exception bucket */
-        movl    G(caml_exception_pointer), %esp
-        popl    G(caml_exception_pointer); CFI_ADJUST(-4)
+        LOAD_VAR(caml_exception_pointer, %esp)
+        POP_VAR(caml_exception_pointer)
         UNDO_ALIGN_STACK(8)
         ret
         CFI_ENDPROC
@@ -407,7 +517,7 @@ FUNCTION(caml_callback2_exn)
         movl    20(%esp), %ecx   /* closure */
         movl    24(%esp), %eax   /* first argument */
         movl    28(%esp), %ebx   /* second argument */
-        movl    $ G(caml_apply2), %esi   /* code pointer */
+        LEA_VAR(caml_apply2, %esi)   /* code pointer */
         jmp     LBL(106)
         CFI_ENDPROC
 
@@ -424,7 +534,7 @@ FUNCTION(caml_callback3_exn)
         movl    24(%esp), %eax   /* first argument */
         movl    28(%esp), %ebx   /* second argument */
         movl    32(%esp), %ecx   /* third argument */
-        movl    $ G(caml_apply3), %esi   /* code pointer */
+        LEA_VAR(caml_apply3, %esi)   /* code pointer */
         jmp     LBL(106)
         CFI_ENDPROC
 
@@ -441,13 +551,13 @@ FUNCTION(caml_ml_array_bound_error)
         ffree   %st(7)
     /* Record lowest stack address and return address */
         movl    (%esp), %edx
-        movl    %edx, G(caml_last_return_address)
+        STORE_VAR(%edx, caml_last_return_address)
         leal    4(%esp), %edx
-        movl    %edx, G(caml_bottom_of_stack)
+        STORE_VAR(%edx, caml_bottom_of_stack)
     /* Re-align the stack */
         andl    $-16, %esp
     /* Branch to [caml_array_bound_error] (never returns) */
-        call    G(caml_array_bound_error)
+        CALL_VAR(caml_array_bound_error)
         CFI_ENDPROC
 
         .globl  G(caml_system__code_end)
