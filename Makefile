@@ -464,7 +464,7 @@ opt:
 	$(MAKE) runtimeopt
 	$(MAKE) ocamlopt
 	$(MAKE) libraryopt
-	$(MAKE) otherlibrariesopt ocamltoolsopt
+	$(MAKE) otherlibrariesopt ocamltoolsopt compilerlibs
 
 # Native-code versions of the tools
 .PHONY: opt.opt
@@ -622,6 +622,13 @@ install:
 	   compilerlibs/ocamlcommon.cma compilerlibs/ocamlbytecomp.cma \
 	   compilerlibs/ocamltoplevel.cma $(BYTESTART) $(TOPLEVELSTART) \
 	   "$(INSTALL_COMPLIBDIR)"
+	$(INSTALL_DATA) \
+           compilerlibs/ocamlcommon.cmxa compilerlibs/ocamlcommon.$(A) \
+	   compilerlibs/ocamlbytecomp.cmxa compilerlibs/ocamlbytecomp.$(A) \
+	   compilerlibs/ocamloptcomp.cmxa  compilerlibs/ocamloptcomp.$(A) \
+	   "$(INSTALL_COMPLIBDIR)"
+	cd "$(INSTALL_COMPLIBDIR)" && \
+		$(RANLIB) ocamlcommon.$(A) ocamlbytecomp.$(A) ocamloptcomp.$(A)
 	$(INSTALL_PROG) expunge "$(INSTALL_LIBDIR)/expunge$(EXE)"
 	$(INSTALL_DATA) \
 	   toplevel/topdirs.cmi \
@@ -797,6 +804,8 @@ partialclean::
 ocamlopt: compilerlibs/ocamlcommon.cma compilerlibs/ocamloptcomp.cma \
           $(OPTSTART)
 	$(CAMLC) $(LINKFLAGS) -o $@ $^
+
+compilerlibs: compilerlibs/ocamlcommon.cmxa compilerlibs/ocamloptcomp.cmxa compilerlibs/ocamlbytecomp.cmxa
 
 partialclean::
 	rm -f ocamlopt
