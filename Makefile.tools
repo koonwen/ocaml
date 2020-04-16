@@ -62,7 +62,7 @@ RUNTIME_VARIANT=-I $(OTOPDIR)/asmrun -I $(OTOPDIR)/byterun \
 export OCAMLRUNPARAM?=v=0
 endif
 
-OCAMLRUN=$(TOPDIR)/byterun/ocamlrun$(USE_RUNTIME)$(EXE)
+OCAMLRUN ?= $(TOPDIR)/byterun/ocamlrun$(USE_RUNTIME)$(EXE)
 
 OCFLAGS=-nostdlib -I $(OTOPDIR)/stdlib $(COMPFLAGS)
 OCOPTFLAGS=

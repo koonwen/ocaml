@@ -146,15 +146,25 @@ flags := -g -nostdlib $(include_directories) \
   -strict-sequence -safe-string -strict-formats \
   -w +a-4-9-41-42-44-45-48 -warn-error A
 
-ocamlc := $(FLEXLINK_ENV) ../byterun/ocamlrun ../ocamlc $(flags)
+ifdef TARGET_BINDIR
+  ocamlrun := $(TARGET_BINDIR)/ocamlrun
+else
+  ocamlrun := ../byterun/ocamlrun
+endif
 
-ocamlopt := $(FLEXLINK_ENV) ../byterun/ocamlrun ../ocamlopt $(flags)
+ocamlc := $(FLEXLINK_ENV) $(ocamlrun) ../ocamlc $(flags)
 
-ocamldep := ../byterun/ocamlrun ../tools/ocamldep -slash
+ocamlopt := $(FLEXLINK_ENV) $(ocamlrun) ../ocamlopt $(flags)
 
-ocamllex := ../byterun/ocamlrun ../lex/ocamllex
+ocamldep := $(ocamlrun) ../tools/ocamldep -slash
 
-ocamlyacc := ../yacc/ocamlyacc
+ocamllex := $(ocamlrun) ../lex/ocamllex
+
+ifdef TARGET_BINDIR
+  ocamlyacc := $(TARGET_BINDIR)/ocamlyacc
+else
+  ocamlyacc := ../yacc/ocamlyacc
+endif
 
 ocamlcdefaultflags :=
 
