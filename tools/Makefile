@@ -306,7 +306,7 @@ make_opcodes: make_opcodes.ml
 	$(CAMLC) make_opcodes.ml -o $@
 
 opnames.ml: $(ROOTDIR)/runtime/caml/instruct.h make_opcodes
-	$(ROOTDIR)/runtime/ocamlrun make_opcodes -opnames < $< > $@
+	$(CAMLRUN) make_opcodes -opnames < $< > $@
 
 clean::
 	rm -f opnames.ml make_opcodes make_opcodes.ml
@@ -400,9 +400,7 @@ CAMLTEX= $(ROOTDIR)/compilerlibs/ocamlcommon.cma \
 
 caml-tex: INCLUDES += $(addprefix -I $(ROOTDIR)/otherlibs/,str $(UNIXLIB))
 caml-tex: $(CAMLTEX)
-	$(ROOTDIR)/runtime/ocamlrun $(ROOTDIR)/ocamlc -nostdlib \
-	                            -I $(ROOTDIR)/stdlib $(LINKFLAGS) -linkall \
-	                            -o $@ -no-alias-deps $(CAMLTEX)
+	$(CAMLC) $(LINKFLAGS) -linkall -o $@ -no-alias-deps $(CAMLTEX)
 
 # we need str and unix which depend on the bytecode version of other tools
 # thus we delay building caml-tex to the opt.opt stage
