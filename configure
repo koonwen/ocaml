@@ -15983,6 +15983,8 @@ if test "x$ax_pthread_ok" = "xyes"; then
       case $host in #(
   *-*-solaris*) :
     pthread_link="-lpthread -lposix4" ;; #(
+  *-*-android*) :
+    pthread_link="" ;;
   *-*-haiku*) :
     pthread_link="" ;; #(
   *) :
