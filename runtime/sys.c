@@ -60,6 +60,10 @@
 #include "caml/callback.h"
 #include "caml/startup_aux.h"
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 static char * error_message(void)
 {
   return strerror(errno);
@@ -424,7 +428,13 @@ CAMLprim value caml_sys_system_command(value command)
   }
   buf = caml_stat_strdup_to_os(String_val(command));
   caml_enter_blocking_section ();
+  
+#if defined(TARGET_IPHONE_SIMULATOR) || defined(TARGET_OS_IPHONE)
+  caml_invalid_argument("Sys.system not implemented");
+#else
   status = system_os(buf);
+#endif
+
   caml_leave_blocking_section ();
   caml_stat_free(buf);
   if (status == -1) caml_sys_error(command);
