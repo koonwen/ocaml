@@ -889,6 +889,8 @@ AS_CASE([$host],
     [arch=amd64; system=openbsd],
   [x86_64-*-darwin*],
     [arch=amd64; system=macosx],
+  [aarch64-*-darwin*],
+    [arch=arm64; system=macosx],
   [x86_64-*-mingw32],
     [arch=amd64; system=mingw64],
   [aarch64-*-linux*],
@@ -1516,6 +1518,7 @@ AS_IF([test x"$enable_systhreads" = "xno"],
       AS_CASE([$host],
         [*-*-solaris*], [pthread_link="-lpthread -lposix4"],
         [*-*-haiku*], [pthread_link=""],
+        [*-*-android*], [pthread_link=""],
         [pthread_link="-lpthread"])
       common_cppflags="$common_cppflags -D_REENTRANT"
       AC_MSG_NOTICE([the POSIX threads library is supported])
