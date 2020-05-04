@@ -6,7 +6,7 @@ set -x
 
 ## Parameters
 OCAML_HOST=$(dirname $(which ocamlrun))/../
-ROOTDIR=$cur__target_dir
+ROOTDIR=$PWD
 
 ## Advanced
 TARGET_BINDIR="$OCAML_HOST/bin"
@@ -86,7 +86,7 @@ make_host \
   ocamltoolsopt \
   ocamltoolsopt.opt
 
-zsh -c "/usr/bin/rm */**/*.cm*"
+rm $(find | grep -e '\.cm.$')
 make_target -C stdlib all allopt
 make_target ocaml ocamlc ocamlopt
 make_target otherlibraries otherlibrariesopt ocamltoolsopt
