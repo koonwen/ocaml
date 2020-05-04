@@ -15,7 +15,7 @@
 /* Runtime support for afl-fuzz */
 #include "caml/config.h"
 
-#if !defined(HAS_SYS_SHM_H)
+#if !defined(HAS_SYS_SHM_H) || defined(__ANDROID__)
 
 #include "caml/mlvalues.h"
 
