@@ -17,6 +17,7 @@ CAMLYACC="$OCAML_HOST/bin/ocamlyacc"
 CAMLDOC="$OCAML_HOST/bin/ocamldoc"
 CAMLDEP="$OCAML_HOST/bin/ocamlc -depend"
 
+HOST_MAKEFILE_CONFIG="$OCAML_HOST/lib/ocaml/Makefile.config"
 HOST_CAMLC="$OCAML_HOST/bin/ocamlc"
 HOST_CAMLOPT="$OCAML_HOST/bin/ocamlopt"
 
@@ -58,11 +59,22 @@ make_caml () {
     $@
 }
 
+get_host_variable () {
+  cat $HOST_MAKEFILE_CONFIG | grep "$1=" | awk -F '=' '{print $2}'
+}
+
 make_host () {
   STATIC_LIBS="$HOST_STATIC_LIBS"
   CAMLC=$HOST_CAMLC
   CAMLOPT=$HOST_CAMLOPT
-  make_caml $@
+
+  NATDYNLINK=$(get_host_variable "NATDYNLINK")
+  NATDYNLINKOPTS=$(get_host_variable "NATDYNLINKOPTS")
+
+  make_caml \
+    NATDYNLINK="$NATDYNLINK" \
+    NATDYNLINKOPTS="$NATDYNLINKOPTS" \
+    $@
 }
 
 make_target () {
@@ -86,7 +98,7 @@ make_host \
   ocamltoolsopt \
   ocamltoolsopt.opt
 
-rm $(find | grep -e '\.cm.$')
+rm $(find . | grep -e '\.cm.$')
 make_target -C stdlib all allopt
 make_target ocaml ocamlc ocamlopt
 make_target otherlibraries otherlibrariesopt ocamltoolsopt
