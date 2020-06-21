@@ -51,7 +51,7 @@ let int_reg_name =
   [| "x0";  "x1";  "x2";  "x3";  "x4";  "x5";  "x6";  "x7";
      "x8";  "x9";  "x10"; "x11"; "x12"; "x13"; "x14"; "x15";
      "x19"; "x20"; "x21"; "x22"; "x23"; "x24";
-     "x25"; "x26"; "x27"; "x28"; "x16"; "x17" |]
+     "x25"; "x26"; "x27"; "x28"; "x16"; "x17"; "x18" |]
 
 let float_reg_name =
   [| "d0";  "d1";  "d2";  "d3";  "d4";  "d5";  "d6";  "d7";
@@ -80,8 +80,8 @@ let rotate_registers = true
 (* Representation of hard registers by pseudo-registers *)
 
 let hard_int_reg =
-  let v = Array.make 28 Reg.dummy in
-  for i = 0 to 27 do
+  let v = Array.make 29 Reg.dummy in
+  for i = 0 to 28 do
     v.(i) <- Reg.at_location Int (Reg i)
   done;
   v
@@ -99,7 +99,7 @@ let all_phys_regs =
 let phys_reg n =
   if n < 100 then hard_int_reg.(n) else hard_float_reg.(n - 100)
 
-let reg_x15 = phys_reg 15
+let reg_x18 = phys_reg 28
 let reg_d7 = phys_reg 107
 
 let stack_slot slot ty =
@@ -179,7 +179,7 @@ let int_dwarf_reg_numbers =
   [| 0; 1; 2; 3; 4; 5; 6; 7;
      8; 9; 10; 11; 12; 13; 14; 15;
      19; 20; 21; 22; 23; 24;
-     25; 26; 27; 28; 16; 17;
+     25; 26; 27; 28; 16; 17; 18;
   |]
 
 let float_dwarf_reg_numbers =
@@ -217,7 +217,7 @@ let destroyed_at_oper = function
   | Iop(Iextcall { alloc = false; }) ->
       destroyed_at_c_call
   | Iop(Ialloc _) ->
-      [| reg_x15 |]
+    [| reg_x18 |]
   | Iop(Iintoffloat | Ifloatofint | Iload(Single, _) | Istore(Single, _, _)) ->
       [| reg_d7 |]            (* d7 / s7 destroyed *)
   | _ -> [||]

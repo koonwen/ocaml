@@ -24,9 +24,9 @@
 #define TRAP_PTR x26
 #define ALLOC_PTR x27
 #define ALLOC_LIMIT x28
-#define ARG x15
 #define TMP x16
 #define ARG_DOMAIN_STATE_PTR x17
+#define ARG x18
 
 #define C_ARG_1 x0
 #define C_ARG_2 x1
