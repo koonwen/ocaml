@@ -26,7 +26,11 @@
 #define ALLOC_LIMIT x28
 #define TMP x16
 #define TMP2 x17
+#if defined(SYS_macosx)
+#define ADDITIONAL_ARG x8
+#else
 #define ADDITIONAL_ARG x18
+#endif
 
 #define C_ARG_1 x0
 #define C_ARG_2 x1
