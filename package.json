@@ -7,7 +7,7 @@
   ],
   "esy": {
     "build": [
-      "./esy-configure --disable-cfi --prefix $cur__install",
+      "./esy-configure --disable-cfi --prefix $cur__install --enable-flambda --enable-flambda-invariants",
       "./esy-build"
     ],
     "buildsInSource": true,
