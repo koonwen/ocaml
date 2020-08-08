@@ -46,7 +46,7 @@
   (modes byte)
   (wrapped false)
   (modules runtime)
-  (flags (-nostdlib -nopervasives))
+  (flags (-nostdlib -nopervasives -ccopt -m32))
   (self_build_stubs_archive (runtime)))
 
 (rule

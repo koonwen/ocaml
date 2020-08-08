@@ -209,6 +209,19 @@ let destroyed_at_oper = function
   | Iop(Iintop Imulh) -> [| eax |]
   | Iop(Iintop(Icomp _) | Iintop_imm(Icomp _, _)) -> [| eax |]
   | Iop(Iintoffloat) -> [| eax |]
+  | Iop(
+      Iload(_, Ibased(_)) |
+      Istore(_, Ibased(_), _) |
+      Ispecific(
+        Ilea(Ibased(_)) |
+        Istore_int(_, Ibased(_), _) |
+        Istore_symbol(_, Ibased(_), _) |
+        Ioffset_loc(_, Ibased(_)) |
+        Ipush_load(Ibased(_)) |
+        Ipush_load_float(Ibased(_)) |
+        Ifloatarithmem(_, _, Ibased(_))
+      )
+    ) -> [| ebx |]
   | Iifthenelse(Ifloattest _, _, _) -> [| eax |]
   | Itrywith _ -> [| edx |]
   | _ -> [||]
