@@ -7,7 +7,7 @@
   ],
   "esy": {
     "build": [
-      "./esy-configure --disable-cfi --prefix $cur__install",
+      "./esy-configure --disable-cfi --prefix $cur__install --enable-flambda --enable-lto",
       "./esy-build"
     ],
     "buildsInSource": true,

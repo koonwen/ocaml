@@ -22,3 +22,18 @@ esac
 
 # Common build steps
 make install
+
+patch () {
+
+mv $cur__bin/$NAME $cur__bin/${NAME}_stock
+cat >$cur__bin/$NAME <<EOF
+#! /bin/sh
+
+eval $cur__bin/${NAME}_stock -lto '"$@"'
+
+EOF
+
+}
+
+patch ocamlopt.byte
+patch ocamlopt.opt
