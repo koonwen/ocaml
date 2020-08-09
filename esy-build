@@ -24,15 +24,15 @@ esac
 make install
 
 patch () {
-
+NAME=$1
 mv $cur__bin/$NAME $cur__bin/${NAME}_stock
 cat >$cur__bin/$NAME <<EOF
 #! /bin/sh
 
-eval $cur__bin/${NAME}_stock -lto '"$@"'
+eval $cur__bin/${NAME}_stock -lto '"\$@"'
 
 EOF
-
+chmod +x $cur__bin/$NAME
 }
 
 patch ocamlopt.byte
