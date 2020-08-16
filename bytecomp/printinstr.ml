@@ -105,6 +105,7 @@ let instruction ppf = function
                          ev.ev_loc.Location.loc_start.Lexing.pos_fname
                          ev.ev_loc.Location.loc_start.Lexing.pos_cnum
                          ev.ev_loc.Location.loc_end.Lexing.pos_cnum
+  | Kmetadata _data -> fprintf ppf "\tmetadata"
 
 let rec instruction_list ppf = function
     [] -> ()

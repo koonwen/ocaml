@@ -124,6 +124,7 @@ type instruction =
   | Kgetdynmet
   | Kevent of debug_event
   | Kstop
+  | Kmetadata of string
 
 val immed_min: int
 val immed_max: int

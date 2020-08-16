@@ -1142,6 +1142,8 @@ value caml_interprete(code_t prog, asize_t prog_size)
       Next;
     }
 
+    Instruct(METADATA): Next;
+
 /* Debugging and machine control */
 
     Instruct(STOP):

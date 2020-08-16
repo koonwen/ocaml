@@ -306,6 +306,7 @@ let emit_instr = function
   | Kgetdynmet -> out opGETDYNMET
   | Kevent ev -> record_event ev
   | Kstop -> out opSTOP
+  | Kmetadata data -> out opMETADATA; slot_for_literal (Const_immstring data)
 
 (* Emission of a list of instructions. Include some peephole optimization. *)
 
