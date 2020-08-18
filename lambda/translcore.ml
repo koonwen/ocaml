@@ -41,6 +41,10 @@ let transl_object =
   ref (fun _id _s _cl -> assert false :
        Ident.t -> string list -> class_expr -> lambda)
 
+(* Callbacks used to hack instructions *)
+let handle_transl_exp _expression lambda = lambda
+let handle_transl_exp = ref handle_transl_exp
+
 (* Compile an exception/extension definition *)
 
 let prim_fresh_oo_id =
@@ -215,8 +219,11 @@ let rec transl_exp e =
       Texp_function _ | Texp_for _ | Texp_while _ -> false
     | _ -> true
   in
+  let lambda =
   if eval_once then transl_exp0 e else
   Translobj.oo_wrap e.exp_env true transl_exp0 e
+  in
+  !handle_transl_exp e lambda
 
 and transl_exp0 e =
   match e.exp_desc with

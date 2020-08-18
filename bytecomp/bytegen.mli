@@ -18,6 +18,13 @@
 open Lambda
 open Instruct
 
+val handle_comp_expr: (
+  compilation_env -> lambda -> int ->
+  before:instruction list ->
+  after:instruction list ->
+  instruction list
+) ref
+
 val compile_implementation: string -> lambda -> instruction list
 val compile_phrase: lambda -> instruction list * instruction list
 val reset: unit -> unit

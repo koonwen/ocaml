@@ -20,6 +20,8 @@ open Asttypes
 open Typedtree
 open Lambda
 
+val handle_transl_exp: (expression -> lambda -> lambda) ref
+
 val pure_module : module_expr -> let_kind
 
 val transl_exp: expression -> lambda

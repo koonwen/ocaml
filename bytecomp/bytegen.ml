@@ -314,6 +314,10 @@ let functions_to_compile  = (Stack.create () : function_to_compile Stack.t)
 
 let compunit_name = ref ""
 
+(* Callbacks used to hack instructions *)
+let handle_comp_expr _env _exp _sz ~before:_ ~after = after
+let handle_comp_expr = ref handle_comp_expr
+
 (* Maximal stack size reached during the current function body *)
 
 let max_stack_used = ref 0
@@ -471,6 +475,7 @@ module Storer =
 
 let rec comp_expr env exp sz cont =
   if sz > !max_stack_used then max_stack_used := sz;
+  let after = 
   match exp with
     Lvar id ->
       begin try
@@ -914,6 +919,8 @@ let rec comp_expr env exp sz cont =
       end
   | Lifused (_, exp) ->
       comp_expr env exp sz cont
+  in
+  !handle_comp_expr env exp sz ~before:cont ~after:after
 
 (* Compile a list of arguments [e1; ...; eN] to a primitive operation.
    The values of eN ... e2 are pushed on the stack, e2 at top of stack,
