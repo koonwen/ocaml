@@ -37,6 +37,7 @@ endif
 
 # Use boot/ocamlc.opt if available
 CAMLRUN ?= $(ROOTDIR)/boot/ocamlrun$(EXE)
+RUNTIME_CAMLRUN ?= $(ROOTDIR)/runtime/ocamlrun$(EXE)
 ifeq (0,$(shell \
   test $(ROOTDIR)/boot/ocamlc.opt -nt $(ROOTDIR)/boot/ocamlc; \
   echo $$?))

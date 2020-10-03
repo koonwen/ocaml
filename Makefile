@@ -76,7 +76,7 @@ LIBFILES=stdlib.cma std_exit.cmo *.cmi camlheader
 COMPLIBDIR=$(LIBDIR)/compiler-libs
 
 TOPINCLUDES=$(addprefix -I otherlibs/,$(filter-out %threads,$(OTHERLIBRARIES)))
-RUNTOP=./runtime/ocamlrun$(EXE) ./ocaml$(EXE) \
+RUNTOP=$(RUNTIME_CAMLRUN) ./ocaml$(EXE) \
   -nostdlib -I stdlib -I toplevel \
   -noinit $(TOPFLAGS) $(TOPINCLUDES)
 NATRUNTOP=./ocamlnat$(EXE) \
@@ -237,7 +237,7 @@ coreboot:
 # Rebuild the library (using runtime/ocamlrun ./ocamlc)
 	$(MAKE) library-cross
 # Promote the new compiler and the new runtime
-	$(MAKE) CAMLRUN=runtime/ocamlrun$(EXE) promote
+	$(MAKE) CAMLRUN=$(RUNTIME_CAMLRUN) promote
 # Rebuild the core system
 	$(MAKE) partialclean
 	$(MAKE) core
@@ -780,7 +780,7 @@ library: ocamlc
 .PHONY: library-cross
 library-cross:
 	$(MAKE) -C stdlib \
-	  $(BOOT_FLEXLINK_CMD) CAMLRUN=../runtime/ocamlrun$(EXE) all
+	  $(BOOT_FLEXLINK_CMD) CAMLRUN=$(RUNTIME_CAMLRUN) all
 
 .PHONY: libraryopt
 libraryopt:
@@ -1017,7 +1017,7 @@ toplevel/opttoploop.cmx: otherlibs/dynlink/dynlink.cmxa
 make_opcodes := tools/make_opcodes$(EXE)
 
 bytecomp/opcodes.ml: runtime/caml/instruct.h $(make_opcodes)
-	runtime/ocamlrun$(EXE) $(make_opcodes) -opcodes < $< > $@
+	$(RUNTIME_CAMLRUN) $(make_opcodes) -opcodes < $< > $@
 
 bytecomp/opcodes.mli: bytecomp/opcodes.ml
 	$(CAMLC) -i $< > $@
