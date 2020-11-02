@@ -9,7 +9,7 @@ jobs:
   parameters:
     host: macOS
     pool:
-      vmImage: 'macOS-10.13'
+      vmImage: 'macOS-10.14'
 
 - template: .ci/build.yaml  # Template reference
   parameters:
