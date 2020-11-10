@@ -149,6 +149,7 @@ let print_cmx_infos (ui, crc) =
       printf "Flambda export information:\n"
     else
       printf "Flambda unit\n";
+    printf "Cmm: %b\n" (export.Export_info.cmm |> Option.is_some);
     if not !no_approx then begin
       let cu =
         Compilation_unit.create (Ident.create_persistent ui.ui_name)

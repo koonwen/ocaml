@@ -35,6 +35,14 @@ val compile_implementation
   -> Lambda.program
   -> unit
 
+(** Compile an implementation from cmm *)
+val compile_cmm
+   : ?toplevel:(string -> bool)
+  -> prefixname:string
+  -> ppf_dump:Format.formatter
+  -> Cmm.phrase list
+  -> unit
+
 val compile_phrase :
     ppf_dump:Format.formatter -> Cmm.phrase -> unit
 

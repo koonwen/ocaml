@@ -109,7 +109,7 @@
    backend_intf backend_var backend_var clambda clambda_primitives
    compilation_unit compilenv convert_primitives internal_variable_names
    linkage_name printclambda printclambda_primitives semantics_of_primitives
-   symbol variable
+   symbol variable cmm
 
    ;; middle_end/closure/
    closure closure_middle_end
@@ -147,7 +147,7 @@
  (modules
    ;; asmcomp/
    afl_instrument arch asmgen asmlibrarian asmlink asmpackager branch_relaxation
-   branch_relaxation_intf cmm_helpers cmm cmmgen cmmgen_state coloring comballoc
+   branch_relaxation_intf cmm_helpers cmmgen cmmgen_state coloring comballoc
    CSE CSEgen
    deadcode domainstate emit emitaux interf interval linear linearize linscan
    liveness mach printcmm printlinear printmach proc reg reload reloadgen
@@ -184,9 +184,16 @@
 (executable
  (name optmain)
  (modes byte)
- (flags (:standard -principal -nostdlib))
+ (flags (:standard -cclib "-I runtime" -principal -nostdlib))
  (libraries ocamloptcomp ocamlmiddleend ocamlcommon runtime stdlib)
  (modules optmain))
+
+(executable
+ (name from_cmx)
+ (modes byte)
+ (flags (:standard -cclib "-I runtime" -principal -nostdlib))
+ (libraries ocamloptcomp ocamlmiddleend ocamlcommon runtime stdlib)
+ (modules from_cmx))
 
 (rule
  (copy optmain.exe ocamlopt.byte))

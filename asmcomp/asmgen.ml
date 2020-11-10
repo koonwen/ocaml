@@ -133,10 +133,9 @@ let compile_unit asm_filename keep_asm obj_filename gen =
     )
 
 let end_gen_implementation ?toplevel ~ppf_dump
-    (clambda : Clambda.with_constants) =
+    (cmm : Cmm.phrase list) =
   Emit.begin_assembly ();
-  clambda
-  ++ Profile.record "cmm" Cmmgen.compunit
+  cmm
   ++ Profile.record "compile_phrases" (List.iter (compile_phrase ~ppf_dump))
   ++ (fun () -> ());
   (match toplevel with None -> () | Some f -> compile_genfuns ~ppf_dump f);
@@ -174,7 +173,22 @@ let compile_implementation ?toplevel ~backend ~filename ~prefixname ~middle_end
       let clambda_with_constants =
         middle_end ~backend ~filename ~prefixname ~ppf_dump program
       in
-      end_gen_implementation ?toplevel ~ppf_dump clambda_with_constants)
+      let cmm = clambda_with_constants ++ Profile.record "cmm" Cmmgen.compunit in
+      if Config.flambda then begin
+        let info = Compilenv.get_export_info () in
+        let info = Export_info.set_cmm cmm info in
+        Compilenv.set_export_info info;
+      end;
+      end_gen_implementation ?toplevel ~ppf_dump cmm)
+
+let compile_cmm ?toplevel ~prefixname ~ppf_dump cmm =
+  let asmfile =
+    if !keep_asm_file || !Emitaux.binary_backend_available
+    then prefixname ^ ext_asm
+    else Filename.temp_file "camlasm" ext_asm
+  in
+  compile_unit asmfile !keep_asm_file (prefixname ^ ext_obj)
+    (fun () -> end_gen_implementation ?toplevel ~ppf_dump cmm)
 
 (* Error report *)
 

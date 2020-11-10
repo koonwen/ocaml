@@ -145,7 +145,7 @@ endif
 ASMCOMP=\
   $(ARCH_SPECIFIC_ASMCOMP) \
   asmcomp/arch.cmo \
-  asmcomp/cmm.cmo asmcomp/printcmm.cmo \
+  asmcomp/printcmm.cmo \
   asmcomp/reg.cmo asmcomp/debug/reg_with_debug_info.cmo \
   asmcomp/debug/reg_availability_set.cmo \
   asmcomp/mach.cmo asmcomp/proc.cmo \
@@ -262,6 +262,7 @@ MIDDLE_END=\
   middle_end/flambda/effect_analysis.cmo \
   middle_end/flambda/inlining_cost.cmo \
   middle_end/flambda/simple_value_approx.cmo \
+	middle_end/cmm.cmo \
   middle_end/flambda/export_info.cmo \
   middle_end/flambda/export_info_for_pack.cmo \
   middle_end/compilenv.cmo \

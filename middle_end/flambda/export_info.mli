@@ -96,6 +96,7 @@ type t = private {
   (* Function parameters known to be invariant (see [Invariant_params])
      indexed by set of closures ID. *)
   recursive : Variable.Set.t Set_of_closures_id.Map.t;
+  cmm : Cmm.phrase list option;
 }
 
 type transient = private {
@@ -128,6 +129,7 @@ val create
   -> constant_closures:Closure_id.Set.t
   -> invariant_params:Variable.Set.t Variable.Map.t Set_of_closures_id.Map.t
   -> recursive:Variable.Set.t Set_of_closures_id.Map.t
+  -> cmm:Cmm.phrase list option
   -> t
 
 val create_transient
@@ -193,3 +195,4 @@ val print_all : Format.formatter -> t * Symbol.t list -> unit
     [Export_id.t] *)
 val print_raw_approx : Format.formatter -> approx -> unit
 val print_raw_descr  : Format.formatter -> descr -> unit
+val set_cmm : Cmm.phrase list -> t -> t

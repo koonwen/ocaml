@@ -149,6 +149,7 @@ type t = {
   constant_closures : Closure_id.Set.t;
   invariant_params : Variable.Set.t Variable.Map.t Set_of_closures_id.Map.t;
   recursive : Variable.Set.t Set_of_closures_id.Map.t;
+  cmm : Cmm.phrase list option
 }
 
 type transient = {
@@ -172,6 +173,7 @@ let empty : t = {
   constant_closures = Closure_id.Set.empty;
   invariant_params = Set_of_closures_id.Map.empty;
   recursive = Set_of_closures_id.Map.empty;
+  cmm = None
 }
 
 let opaque_transient ~compilation_unit ~root_symbol : transient =
@@ -194,7 +196,7 @@ let opaque_transient ~compilation_unit ~root_symbol : transient =
 
 let create ~sets_of_closures ~values ~symbol_id
       ~offset_fun ~offset_fv ~constant_closures
-      ~invariant_params ~recursive =
+      ~invariant_params ~recursive ~cmm =
   { sets_of_closures;
     values;
     symbol_id;
@@ -203,6 +205,7 @@ let create ~sets_of_closures ~values ~symbol_id
     constant_closures;
     invariant_params;
     recursive;
+    cmm;
   }
 
 let create_transient
@@ -259,6 +262,7 @@ let t_of_transient transient
     offset_fun;
     offset_fv;
     constant_closures;
+    cmm = None
   }
 
 let merge (t1 : t) (t2 : t) : t =
@@ -271,6 +275,13 @@ let merge (t1 : t) (t2 : t) : t =
         | Some map1, Some map2 ->
           Some (Export_id.Map.disjoint_union ?eq map1 map2))
       map1 map2
+  in
+  let cmm =
+    match t1.cmm, t2.cmm with
+    | None, None -> None
+    | Some cmm, None
+    | None, Some cmm -> Some cmm
+    | Some cmm1, Some cmm2 -> Some (cmm1 @ cmm2)
   in
   let int_eq (i : int) j = i = j in
   { values = eidmap_disjoint_union ~eq:equal_descr t1.values t2.values;
@@ -296,6 +307,7 @@ let merge (t1 : t) (t2 : t) : t =
         ~print:Variable.Set.print
         ~eq:Variable.Set.equal
         t1.recursive t2.recursive;
+    cmm
   }
 
 let find_value eid map =
@@ -553,3 +565,4 @@ let print_all ppf ((t, root_symbols) : t * Symbol.t list) =
     print_approx (t, root_symbols);
   fprintf ppf "functions@ %a@.@."
     print_functions t
+let set_cmm cmm t = { t with cmm = Some cmm }

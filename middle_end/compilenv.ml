@@ -290,6 +290,10 @@ let get_flambda_export_info ui =
   | Clambda _ -> assert false
   | Flambda ei -> ei
 
+let get_export_info () =
+  assert(Config.flambda);
+  get_flambda_export_info current_unit
+
 let set_export_info export_info =
   assert(Config.flambda);
   current_unit.ui_export_info <- Flambda export_info

@@ -85,6 +85,9 @@ val record_global_approx_toplevel: unit -> unit
         (* Record the current approximation for the current toplevel phrase
            clambda-only *)
 
+val get_export_info: unit -> Export_info.t
+        (* Record the information of the unit being compiled
+           flambda-only *)
 val set_export_info: Export_info.t -> unit
         (* Record the information of the unit being compiled
            flambda-only *)
