@@ -7,7 +7,7 @@
   ],
   "esy": {
     "build": [
-      "./esy-configure --prefix $cur__install",
+      "./esy-configure --enable-flambda --prefix $cur__install",
       "./esy-build"
     ],
     "buildsInSource": true,
