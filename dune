@@ -91,7 +91,7 @@
     bytegen bytelibrarian bytelink bytepackager emitcode printinstr
 
     ;; driver/
-    errors compile
+    errors compile maindriver
  ))
 
 (library
@@ -160,7 +160,7 @@
    compute_ranges
 
    ;; driver/
-   optcompile opterrors
+   optcompile opterrors optmaindriver
  )
 )
 
