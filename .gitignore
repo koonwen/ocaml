@@ -272,3 +272,7 @@ lib/ocaml/
 man/
 _esy
 *~
+target/*
+*-compiler/*
+_esy
+*.esy.lock
