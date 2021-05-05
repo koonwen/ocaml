@@ -13599,6 +13599,8 @@ fi; system=elf ;; #(
     arch=arm; model=armv8; system=linux_eabi ;; #(
   armv7*-*-linux-gnueabi) :
     arch=arm; model=armv7; system=linux_eabi ;; #(
+  armv7*-*-linux-androideabi*) :
+    arch=arm; model=armv7; system=linux_eabi ;; #(
   armv6t2*-*-linux-gnueabi) :
     arch=arm; model=armv6t2; system=linux_eabi ;; #(
   armv6*-*-linux-gnueabi) :
