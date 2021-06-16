@@ -313,7 +313,10 @@ and add_modtype bv mty =
         cstrl
   | Pmty_typeof m -> add_module_expr bv m
   | Pmty_extension e -> handle_extension e
-
+and add_optional_modtype bv x =
+  match x with
+    None -> ()
+  | Some mty -> add_modtype bv mty
 and add_module_alias bv l =
   (* If we are in delayed dependencies mode, we delay the dependencies
        induced by "Lident s" *)
@@ -377,10 +380,7 @@ and add_sig_item (bv, m) item =
       List.iter (fun pmd -> add_modtype bv' pmd.pmd_type) decls;
       (bv', m')
   | Psig_modtype x ->
-      begin match x.pmtd_type with
-        None -> ()
-      | Some mty -> add_modtype bv mty
-      end;
+      add_optional_modtype bv x.pmtd_type;
       (bv, m)
   | Psig_open od ->
       (open_description bv od, m)
@@ -513,10 +513,7 @@ and add_struct_item (bv, m) item : _ String.Map.t * _ String.Map.t =
         bindings;
       (bv', m)
   | Pstr_modtype x ->
-      begin match x.pmtd_type with
-        None -> ()
-      | Some mty -> add_modtype bv mty
-      end;
+      add_optional_modtype bv x.pmtd_type;
       (bv, m)
   | Pstr_open od ->
       (open_declaration bv od, m)
