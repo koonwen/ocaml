@@ -1032,7 +1032,12 @@ and class_expr ctxt f x =
         pp f "@[<2>let open%s %a in@;%a@]"
           (override o.popen_override) longident_loc o.popen_expr
           (class_expr ctxt) e
-
+and optional_module_type ctxt f md =
+  match md with
+  | None -> ()
+  | Some mt ->
+      pp_print_space f () ;
+      pp f "@ =@ %a" (module_type ctxt) mt
 and module_type ctxt f x =
   if x.pmty_attributes <> [] then begin
     pp f "((%a)%a)" (module_type ctxt) {x with pmty_attributes=[]}
@@ -1148,12 +1153,7 @@ and signature_item ctxt f x : unit =
   | Psig_modtype {pmtd_name=s; pmtd_type=md; pmtd_attributes=attrs} ->
       pp f "@[<hov2>module@ type@ %s%a@]%a"
         s.txt
-        (fun f md -> match md with
-           | None -> ()
-           | Some mt ->
-               pp_print_space f () ;
-               pp f "@ =@ %a" (module_type ctxt) mt
-        ) md
+        (optional_module_type ctxt) md
         (item_attributes ctxt) attrs
   | Psig_class_type (l) -> class_type_declaration_list ctxt f l
   | Psig_recmodule decls ->
@@ -1366,12 +1366,7 @@ and structure_item ctxt f x =
   | Pstr_modtype {pmtd_name=s; pmtd_type=md; pmtd_attributes=attrs} ->
       pp f "@[<hov2>module@ type@ %s%a@]%a"
         s.txt
-        (fun f md -> match md with
-           | None -> ()
-           | Some mt ->
-               pp_print_space f () ;
-               pp f "@ =@ %a" (module_type ctxt) mt
-        ) md
+        (optional_module_type ctxt) md
         (item_attributes ctxt) attrs
   | Pstr_class l ->
       let extract_class_args cl =
