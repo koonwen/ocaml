@@ -1444,6 +1444,23 @@ and structure_item ctxt f x =
             (fun f l2 -> List.iter (aux f) l2) l2
       | _ -> assert false
       end
+  | Pstr_recmodtype decls ->
+    let aux f = function
+      | decl ->
+          pp f "@[<hov2>@ and@ %s@ =@ %a@]%a"
+            decl.pmtd_name.txt
+            (optional_module_type ctxt) decl.pmtd_type
+            (item_attributes ctxt) decl.pmtd_attributes
+    in
+    begin match decls with
+    | decl :: l2 ->
+        pp f "@[<hv>@[<hov2>module@ type@ %s%a@]%a@ %a@]"
+        decl.pmtd_name.txt
+          (optional_module_type ctxt) decl.pmtd_type
+          (item_attributes ctxt) decl.pmtd_attributes
+          (fun f l2 -> List.iter (aux f) l2) l2
+    | _ -> assert false
+    end
   | Pstr_attribute a -> floating_attribute ctxt f a
   | Pstr_extension(e, a) ->
       item_extension ctxt f e;

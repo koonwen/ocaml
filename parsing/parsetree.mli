@@ -911,6 +911,8 @@ and structure_item_desc =
         (* module rec X1 = ME1 and ... and Xn = MEn *)
   | Pstr_modtype of module_type_declaration
         (* module type S = MT *)
+  | Pstr_recmodtype of module_type_declaration list
+        (* module type rec S1 = MT1 and ... and Sn = MTn *)
   | Pstr_open of open_declaration
         (* open X *)
   | Pstr_class of class_declaration list

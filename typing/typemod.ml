@@ -235,6 +235,24 @@ let check_recmod_typedecls env decls =
         (Mtype.type_paths env (Pident id) md.Types.md_type))
     decls
 
+let check_recmodtype_typedecls env decls =
+  let recmod_ids = List.map fst decls in
+  let non_abstract_decl = 
+    List.filter_map
+      (fun (id, mtd) ->
+         Option.map
+           (fun mtd_type -> (id, mtd, mtd_type))
+           mtd.Types.mtd_type)
+      decls in
+  List.iter
+    (fun (id, mtd, mtd_type) ->
+      List.iter
+        (fun path ->
+          Typedecl.check_recmod_typedecl env mtd.Types.mtd_loc recmod_ids
+                                          path (Env.find_type path env))
+        (Mtype.type_paths env (Pident id) mtd_type))
+    non_abstract_decl
+
 (* Merge one "with" constraint in a signature *)
 
 let rec add_rec_types env = function
@@ -1604,6 +1622,71 @@ and transl_recmodule_modtypes env sdecls =
     ) sdecls dcl2
   in
   (dcl2, env2)
+
+and transl_recmodtypes_decl_aux names env pmtd =
+  Builtin_attributes.warning_scope pmtd.pmtd_attributes
+    (fun () -> transl_modtype_decl_aux names env pmtd)
+and transl_recmodtypes_modtypes env sdecls =
+  let make_env curr =
+    List.fold_left
+      (fun env (id, _, mty, _) -> Env.add_modtype id mty env)
+      env curr in
+  let transition env_c curr =
+    List.map2
+      (fun pmtd (id, id_loc, mtd, _) ->
+        let tmty =
+          Builtin_attributes.warning_scope pmtd.pmtd_attributes
+            (fun () -> Option.map (transl_modtype env_c) pmtd.pmtd_type)
+        in
+        let mtd_type = Option.map (fun tmty -> tmty.mty_type) tmty in
+        let mtd = { mtd with Types.mtd_type = mtd_type } in
+        (id, id_loc, mtd, tmty))
+      sdecls curr in
+  let map_mtys curr = List.map (fun (id, _, md, _) -> (id, md)) curr in
+  let scope = Ctype.create_scope () in
+  let ids = List.map (fun x -> (Ident.create_scoped ~scope x.pmtd_name.txt)) sdecls
+  in
+  let approx_env =
+    List.fold_left
+      (fun env id ->
+          Env.enter_unbound_modtype (Ident.name id)
+            Modtype_unbound_illegal_recursion env)
+      env ids
+  in
+  let init =
+    List.map2
+      (fun id pmtd ->
+         let mtd =
+           { mtd_type = Option.map (approx_modtype approx_env) pmtd.pmtd_type;
+             mtd_loc = pmtd.pmtd_loc;
+             mtd_attributes = pmtd.pmtd_attributes;
+             mtd_uid = Uid.mk ~current_unit:(Env.get_unit_name ()) }
+         in
+        (id, pmtd.pmtd_name, mtd, ()))
+      ids sdecls
+  in
+  let env0 = make_env init in
+  let dcl1 =
+    Warnings.without_warnings
+      (fun () -> transition env0 init)
+  in
+  let env1 = make_env dcl1 in
+  check_recmodtype_typedecls env1 (map_mtys dcl1);
+  let dcl2 = transition env1 dcl1 in
+  let env2 = make_env dcl2 in
+  check_recmodtype_typedecls env2 (map_mtys dcl2);
+  let dcl2 =
+    List.map2 (fun pmtd (id, id_loc, mtd, mty) ->
+      let tmd =
+        {mtd_id=id; mtd_name=id_loc; mtd_type=mty;
+         mtd_loc=pmtd.pmtd_loc;
+         mtd_attributes=pmtd.pmtd_attributes}
+      in
+      tmd, mtd.mtd_uid
+    ) sdecls dcl2
+  in
+  (dcl2, env2)
+
 
 (* Try to convert a module expression to a module path. *)
 

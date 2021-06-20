@@ -515,6 +515,17 @@ and add_struct_item (bv, m) item : _ String.Map.t * _ String.Map.t =
   | Pstr_modtype x ->
       add_optional_modtype bv x.pmtd_type;
       (bv, m)
+  | Pstr_recmodtype declarations ->
+      let add =
+        List.fold_right
+          (fun x -> String.Map.add x.pmtd_name.txt bound)
+          declarations
+      in
+      let bv' = add bv and m = add m in
+      List.iter
+        (fun x -> add_optional_modtype bv' x.pmtd_type)
+        declarations;
+      (bv', m)
   | Pstr_open od ->
       (open_declaration bv od, m)
   | Pstr_class cdl ->

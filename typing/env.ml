@@ -81,6 +81,9 @@ type value_unbound_reason =
 type module_unbound_reason =
   | Mod_unbound_illegal_recursion
 
+type modtype_unbound_reason =
+  | Modtype_unbound_illegal_recursion
+
 type summary =
     Env_empty
   | Env_value of summary * Ident.t * value_description
@@ -97,6 +100,7 @@ type summary =
   | Env_persistent of summary * Ident.t
   | Env_value_unbound of summary * string * value_unbound_reason
   | Env_module_unbound of summary * string * module_unbound_reason
+  | Env_modtype_unbound of summary * string * modtype_unbound_reason
 
 type address =
   | Aident of Ident.t
@@ -399,7 +403,7 @@ type t = {
   labels: label_data TycompTbl.t;
   types: (type_data, type_data) IdTbl.t;
   modules: (module_entry, module_data) IdTbl.t;
-  modtypes: (modtype_data, modtype_data) IdTbl.t;
+  modtypes: (modtype_entry, modtype_data) IdTbl.t;
   classes: (class_data, class_data) IdTbl.t;
   cltypes: (cltype_data, cltype_data) IdTbl.t;
   functor_args: unit Ident.tbl;
@@ -493,6 +497,10 @@ and module_entry =
 
 and modtype_data = modtype_declaration
 
+and modtype_entry =
+  | Modtype_bound of modtype_data
+  | Modtype_unbound of modtype_unbound_reason
+
 and class_data =
   { clda_declaration : class_declaration;
     clda_address : address_lazy }
@@ -533,6 +541,7 @@ type lookup_error =
   | Abstract_used_as_structure of Longident.t
   | Generative_used_as_applicative of Longident.t
   | Illegal_reference_to_recursive_module
+  | Illegal_reference_to_recursive_modtype
   | Cannot_scrape_alias of Longident.t * Path.t
 
 type error =
@@ -632,6 +641,7 @@ let diff env1 env2 =
 let wrap_identity x = x
 let wrap_value vda = Val_bound vda
 let wrap_module mda = Mod_local mda
+let wrap_modtype mty = Modtype_bound mty
 
 (* Forward declarations *)
 
@@ -942,7 +952,11 @@ let find_type_full path env =
 
 let find_modtype path env =
   match path with
-  | Pident id -> IdTbl.find_same id env.modtypes
+  | Pident id -> begin
+      match IdTbl.find_same id env.modtypes with
+      | Modtype_bound data -> data
+      | Modtype_unbound _ -> raise Not_found
+    end
   | Pdot(p, s) ->
       let sc = find_structure_components p env in
       NameMap.find s sc.comp_modtypes
@@ -1821,7 +1835,7 @@ and store_module ~check ~freshening_sub id addr presence md env =
 
 and store_modtype id info env =
   { env with
-    modtypes = IdTbl.add id info env.modtypes;
+    modtypes = IdTbl.add id (Modtype_bound info) env.modtypes;
     summary = Env_modtype(env.summary, id, info) }
 
 and store_class id addr desc env =
@@ -1999,6 +2013,12 @@ let enter_unbound_module name reason env =
     modules = IdTbl.add id (Mod_unbound reason) env.modules;
     summary = Env_module_unbound(env.summary, name, reason) }
 
+let enter_unbound_modtype name reason env =
+  let id = Ident.create_local name in
+  { env with
+    modtypes = IdTbl.add id (Modtype_unbound reason) env.modtypes;
+    summary = Env_modtype_unbound(env.summary, name, reason) }
+    
 (* Open a signature path *)
 
 let add_components slot root env0 comps =
@@ -2257,6 +2277,12 @@ let report_module_unbound ~errors ~loc env reason =
       (* see #5965 *)
     may_lookup_error errors loc env Illegal_reference_to_recursive_module
 
+
+let report_modtype_unbound ~errors ~loc env reason =
+  match reason with
+  | Modtype_unbound_illegal_recursion ->
+    may_lookup_error errors loc env Illegal_reference_to_recursive_modtype
+    
 let report_value_unbound ~errors ~loc env reason lid =
   match reason with
   | Val_unbound_instance_variable ->
@@ -2396,10 +2422,12 @@ let lookup_ident_type ~errors ~use ~loc s env =
       may_lookup_error errors loc env (Unbound_type (Lident s))
 
 let lookup_ident_modtype ~errors ~use ~loc s env =
-  match IdTbl.find_name wrap_identity ~mark:use s env.modtypes with
-  | (path, data) as res ->
+  match IdTbl.find_name wrap_modtype ~mark:use s env.modtypes with
+  | (path, Modtype_bound data) ->
       use_modtype ~use ~loc path data;
-      res
+      (path, data)
+  | (_, Modtype_unbound reason) ->
+      report_modtype_unbound ~errors ~loc env reason
   | exception Not_found ->
       may_lookup_error errors loc env (Unbound_modtype (Lident s))
 
@@ -2822,7 +2850,7 @@ let bound_type name env =
   bound wrap_identity (fun env -> env.types) name env
 
 let bound_modtype name env =
-  bound wrap_identity (fun env -> env.modtypes) name env
+  bound wrap_modtype (fun env -> env.modtypes) name env
 
 let bound_class name env =
   bound wrap_identity (fun env -> env.classes) name env
@@ -2932,8 +2960,13 @@ and fold_types f =
     (fun env -> env.types) (fun sc -> sc.comp_types)
     (fun k p tda acc -> f k p tda.tda_declaration acc)
 and fold_modtypes f =
-  find_all wrap_identity
-    (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) f
+  find_all wrap_modtype
+    (fun env -> env.modtypes)
+    (fun sc -> sc.comp_modtypes)
+    (fun k p mtye acc ->
+        match mtye with
+        | Modtype_unbound _ -> acc
+        | Modtype_bound mtyd -> f k p mtyd acc)
 and fold_classes f =
   find_all wrap_identity (fun env -> env.classes) (fun sc -> sc.comp_classes)
     (fun k p clda acc -> f k p clda.clda_declaration acc)
@@ -3002,6 +3035,8 @@ let filter_non_loaded_persistent f env =
           Env_value_unbound (filter_summary s ids, n, r)
       | Env_module_unbound (s, n, r) ->
           Env_module_unbound (filter_summary s ids, n, r)
+      | Env_modtype_unbound (s, n, r) ->
+          Env_modtype_unbound (filter_summary s ids, n, r)
   in
   { env with
     modules = remove_ids env.modules to_remove;
@@ -3173,6 +3208,8 @@ let report_lookup_error _loc env ppf = function
         !print_longident lid
   | Illegal_reference_to_recursive_module ->
      fprintf ppf "Illegal recursive module reference"
+  | Illegal_reference_to_recursive_modtype ->
+    fprintf ppf "Illegal recursive module type reference"
   | Structure_used_as_functor lid ->
       fprintf ppf "@[The module %a is a structure, it cannot be applied@]"
         !print_longident lid

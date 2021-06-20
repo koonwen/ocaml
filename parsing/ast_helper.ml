@@ -296,6 +296,7 @@ module Str = struct
   let module_ ?loc a = mk ?loc (Pstr_module a)
   let rec_module ?loc a = mk ?loc (Pstr_recmodule a)
   let modtype ?loc a = mk ?loc (Pstr_modtype a)
+  let rec_modtype ?loc a = mk ?loc (Pstr_recmodtype a)
   let open_ ?loc a = mk ?loc (Pstr_open a)
   let class_ ?loc a = mk ?loc (Pstr_class a)
   let class_type ?loc a = mk ?loc (Pstr_class_type a)

@@ -27,6 +27,9 @@ type value_unbound_reason =
 type module_unbound_reason =
   | Mod_unbound_illegal_recursion
 
+type modtype_unbound_reason =
+  | Modtype_unbound_illegal_recursion
+
 type summary =
     Env_empty
   | Env_value of summary * Ident.t * value_description
@@ -45,6 +48,7 @@ type summary =
   | Env_persistent of summary * Ident.t
   | Env_value_unbound of summary * string * value_unbound_reason
   | Env_module_unbound of summary * string * module_unbound_reason
+  | Env_modtype_unbound of summary * string * modtype_unbound_reason
 
 type address =
   | Aident of Ident.t
@@ -167,6 +171,7 @@ type lookup_error =
   | Abstract_used_as_structure of Longident.t
   | Generative_used_as_applicative of Longident.t
   | Illegal_reference_to_recursive_module
+  | Illegal_reference_to_recursive_modtype
   | Cannot_scrape_alias of Longident.t * Path.t
 
 val lookup_error: Location.t -> t -> lookup_error -> 'a
@@ -339,6 +344,8 @@ val enter_signature: scope:int -> signature -> t -> signature * t
 val enter_unbound_value : string -> value_unbound_reason -> t -> t
 
 val enter_unbound_module : string -> module_unbound_reason -> t -> t
+
+val enter_unbound_modtype : string -> modtype_unbound_reason -> t -> t
 
 (* Initialize the cache of in-core module interfaces. *)
 val reset_cache: unit -> unit

@@ -834,6 +834,10 @@ and structure_item i ppf x =
       line i ppf "Pstr_modtype %a\n" fmt_string_loc x.pmtd_name;
       attributes i ppf x.pmtd_attributes;
       modtype_declaration i ppf x.pmtd_type
+  | Pstr_recmodtype declarations ->
+      line i ppf "Pstr_recmodtype\n";
+      list i modtype_declaration ppf
+        (List.map (fun x -> x.pmtd_type) declarations);
   | Pstr_open od ->
       line i ppf "Pstr_open %a\n" fmt_override_flag od.popen_override;
       module_expr i ppf od.popen_expr;

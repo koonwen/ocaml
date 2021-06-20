@@ -363,6 +363,8 @@ module M = struct
     | Pstr_module x -> module_ ~loc (sub.module_binding sub x)
     | Pstr_recmodule l -> rec_module ~loc (List.map (sub.module_binding sub) l)
     | Pstr_modtype x -> modtype ~loc (sub.module_type_declaration sub x)
+    | Pstr_recmodtype l ->
+        rec_modtype ~loc (List.map (sub.module_type_declaration sub) l)
     | Pstr_open x -> open_ ~loc (sub.open_declaration sub x)
     | Pstr_class l -> class_ ~loc (List.map (sub.class_declaration sub) l)
     | Pstr_class_type l ->

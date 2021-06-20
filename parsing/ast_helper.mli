@@ -310,6 +310,7 @@ module Str:
     val module_: ?loc:loc -> module_binding -> structure_item
     val rec_module: ?loc:loc -> module_binding list -> structure_item
     val modtype: ?loc:loc -> module_type_declaration -> structure_item
+    val rec_modtype: ?loc:loc -> module_type_declaration list -> structure_item
     val open_: ?loc:loc -> open_declaration -> structure_item
     val class_: ?loc:loc -> class_declaration list -> structure_item
     val class_type: ?loc:loc -> class_type_declaration list -> structure_item
