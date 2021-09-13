@@ -191,60 +191,184 @@ static char sig_alt_stack[SIGSTKSZ];
 extern void caml_stack_overflow(caml_domain_state*);
 #endif
 
+static void disable_segv_handler() {
+  struct sigaction act;
+  act.sa_handler = SIG_DFL;
+  act.sa_flags = 0;
+  sigemptyset(&act.sa_mask);
+  sigaction(SIGSEGV, &act, NULL);
+}
+static void handle_stack_overflow(ucontext_t * context) {
+#ifdef RETURN_AFTER_STACK_OVERFLOW
+#ifndef CONTEXT_PC
+#error "CONTEXT_PC must be defined if RETURN_AFTER_STACK_OVERFLOW is"
+#endif
+  /* Tweak the PC part of the context so that on return from this
+      handler, we jump to the asm function [caml_stack_overflow]
+      (from $ARCH.S). */
+  CONTEXT_C_ARG_1 = (context_reg) Caml_state;
+  CONTEXT_PC = (context_reg) &caml_stack_overflow;
+#else
+  /* Raise a Stack_overflow exception straight from this signal handler */
+#if defined(CONTEXT_YOUNG_PTR) && defined(CONTEXT_EXCEPTION_POINTER)
+  Caml_state->exception_pointer == (char *) CONTEXT_EXCEPTION_POINTER;
+  Caml_state->young_ptr = (value *) CONTEXT_YOUNG_PTR;
+#endif
+  caml_raise_stack_overflow();
+#endif
+}
+
+#ifdef NAKED_POINTERS_CHECKER
+#ifndef CONTEXT_PC
+/* TODO: this error message was wrong */
+#error "CONTEXT_PC must be defined if NAKED_POINTERS_CHECKER is"
+#endif
+static void handle_naked_pointers_checker(ucontext_t * context) {
+  CONTEXT_PC = (context_reg)Caml_state->checking_pointer_pc;
+}
+#endif /* NAKED_POINTERS_CHECKER */
+
+#define MINOR_OVERFLOW
+#define CONTEXT_YOUNG_PTR (context->uc_mcontext.gregs[REG_R15])
+
+#ifdef MINOR_OVERFLOW
+#ifndef CONTEXT_PC
+#error "CONTEXT_PC must be defined if MINOR_OVERFLOW is"
+#endif
+static void handle_minor_overflow(ucontext_t * context) {
+  short* test_pc;
+  value gc_regs[13];
+  short allocsz;
+
+  test_pc = (short*)CONTEXT_PC;
+  CONTEXT_PC = CONTEXT_PC + 3;
+  /*
+    subq $0, %r15; 49 83 ef 00
+    subq $127, %r15; 49 83 ef 7f
+    subq $128, %r15; 49 81 ef 80 00 00 00
+    subq $256, %r15; 49 81 ef 00 01 00 00
+  */
+  allocsz = test_pc[-1];
+  if (allocsz == 0) {
+    allocsz = test_pc[-2];
+  } else {
+    allocsz = allocsz >> 8;
+  }
+  // TODO: is this -1 correct?
+  allocsz = (allocsz >> 3) - 1;
+
+  // printf("%d\n", allocsz);
+  // printf("minor overflow\n");
+
+  // TODO: this
+  Caml_state->young_ptr = (value*)CONTEXT_YOUNG_PTR;
+  Caml_state->last_return_address = CONTEXT_PC;
+  Caml_state->bottom_of_stack = (char*)CONTEXT_SP;
+  Caml_state->gc_regs = gc_regs;
+
+  #define STORE_CONTEXT(NAME, n) \
+    (gc_regs[n] = ((value)(context->uc_mcontext.gregs[REG_##NAME])))
+  STORE_CONTEXT(RBP, 12);
+  STORE_CONTEXT(R11, 11);
+  STORE_CONTEXT(R10, 10);
+  STORE_CONTEXT(R13, 9);
+  STORE_CONTEXT(R12, 8);
+  STORE_CONTEXT(R9, 7);
+  STORE_CONTEXT(R8, 6);
+  STORE_CONTEXT(RCX, 5);
+  STORE_CONTEXT(RDX, 4);
+  STORE_CONTEXT(RSI, 3);
+  STORE_CONTEXT(RDI, 2);
+  STORE_CONTEXT(RBX, 1);
+  STORE_CONTEXT(RAX, 0);
+  #undef CONTEXT
+  
+
+  // printf("%p\n", Caml_state->last_return_address);
+
+  caml_alloc_small_dispatch(allocsz, CAML_DO_TRACK | CAML_FROM_CAML, 0, NULL);
+  #define LOAD_REG(NAME, n) \
+    context->uc_mcontext.gregs[REG_##NAME] = (intnat)gc_regs[n]
+  LOAD_REG(RBP, 12);
+  LOAD_REG(R11, 11);
+  LOAD_REG(R10, 10);
+  LOAD_REG(R13, 9);
+  LOAD_REG(R12, 8);
+  LOAD_REG(R9, 7);
+  LOAD_REG(R8, 6);
+  LOAD_REG(RCX, 5);
+  LOAD_REG(RDX, 4);
+  LOAD_REG(RSI, 3);
+  LOAD_REG(RDI, 2);
+  LOAD_REG(RBX, 1);
+  LOAD_REG(RAX, 0);
+  #undef LOAD_REG
+  // printf(
+  //   "base: %p start:%p end: %p\n",
+  //   Caml_state->young_base,
+  //   Caml_state->young_alloc_start,
+  //   Caml_state->young_alloc_end);
+  // printf("%p\n", (void*)CONTEXT_YOUNG_PTR);
+  CONTEXT_YOUNG_PTR = (uintnat)Caml_state->young_ptr;
+  // printf("%p\n", (void*)CONTEXT_YOUNG_PTR);
+  #undef PRINT
+}
+#endif
+
 /* Address sanitizer is confused when running the stack overflow
    handler in an alternate stack. We deactivate it for all the
    functions used by the stack overflow handler. */
 CAMLno_asan
 DECLARE_SIGNAL_HANDLER(segv_handler)
 {
-  struct sigaction act;
   char * fault_addr;
+  intnat is_stack_overflow;
+  #ifdef MINOR_OVERFLOW
+  intnat is_minor_overflow;
+  #endif
+
+  fault_addr = CONTEXT_FAULTING_ADDRESS;
+  // printf("segfault %p\n", fault_addr);
+
+  // faulting address is on the stack, or within EXTRA_STACK of it
+  is_stack_overflow =
+    fault_addr < Caml_state->top_of_stack &&
+    (uintnat)fault_addr >= CONTEXT_SP - EXTRA_STACK;
+
+  #ifdef MINOR_OVERFLOW
+  // faulting address is on the disabled zone of the heap
+  is_minor_overflow =
+    (void*)fault_addr > Caml_state->young_base &&
+    (value*)fault_addr < Caml_state->young_start;
+  #endif
 
   /* Sanity checks:
      - faulting address is word-aligned
-     - faulting address is on the stack, or within EXTRA_STACK of it
+     - is a stack overflow or is a minor overflow
      - we are in OCaml code */
-  fault_addr = CONTEXT_FAULTING_ADDRESS;
   if (((uintnat) fault_addr & (sizeof(intnat) - 1)) == 0
-      && fault_addr < Caml_state->top_of_stack
-      && (uintnat)fault_addr >= CONTEXT_SP - EXTRA_STACK
+#ifdef MINOR_OVERFLOW
+      && (is_stack_overflow || is_minor_overflow)
+#else
+      && is_stack_overflow
+#endif
 #ifdef CONTEXT_PC
       && caml_find_code_fragment_by_pc((char *) CONTEXT_PC) != NULL
 #endif
       ) {
-#ifdef RETURN_AFTER_STACK_OVERFLOW
-    /* Tweak the PC part of the context so that on return from this
-       handler, we jump to the asm function [caml_stack_overflow]
-       (from $ARCH.S). */
-#ifdef CONTEXT_PC
-    CONTEXT_C_ARG_1 = (context_reg) Caml_state;
-    CONTEXT_PC = (context_reg) &caml_stack_overflow;
-#else
-#error "CONTEXT_PC must be defined if RETURN_AFTER_STACK_OVERFLOW is"
-#endif
-#else
-    /* Raise a Stack_overflow exception straight from this signal handler */
-#if defined(CONTEXT_YOUNG_PTR) && defined(CONTEXT_EXCEPTION_POINTER)
-    Caml_state->exception_pointer == (char *) CONTEXT_EXCEPTION_POINTER;
-    Caml_state->young_ptr = (value *) CONTEXT_YOUNG_PTR;
-#endif
-    caml_raise_stack_overflow();
-#endif
+    if (is_stack_overflow) {
+      handle_stack_overflow(context);
+    } else {
+      handle_minor_overflow(context);
+    };
 #ifdef NAKED_POINTERS_CHECKER
   } else if (Caml_state->checking_pointer_pc) {
-#ifdef CONTEXT_PC
-    CONTEXT_PC = (context_reg)Caml_state->checking_pointer_pc;
-#else
-#error "CONTEXT_PC must be defined if RETURN_AFTER_STACK_OVERFLOW is"
-#endif /* CONTEXT_PC */
+      handle_naked_pointers_checker(context);
 #endif /* NAKED_POINTERS_CHECKER */
   } else {
     /* Otherwise, deactivate our exception handler and return,
        causing fatal signal to be generated at point of error. */
-    act.sa_handler = SIG_DFL;
-    act.sa_flags = 0;
-    sigemptyset(&act.sa_mask);
-    sigaction(SIGSEGV, &act, NULL);
+    disable_segv_handler();
   }
 }
 

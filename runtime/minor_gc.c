@@ -140,7 +140,6 @@ void caml_set_minor_heap_size (asize_t bsz)
 {
   char *new_heap;
   void *new_heap_base;
-
   CAMLassert (bsz >= Bsize_wsize(Minor_heap_min));
   CAMLassert (bsz <= Bsize_wsize(Minor_heap_max));
   CAMLassert (bsz % Page_size == 0);
@@ -153,8 +152,14 @@ void caml_set_minor_heap_size (asize_t bsz)
     caml_empty_minor_heap ();
   }
   CAMLassert (Caml_state->young_ptr == Caml_state->young_alloc_end);
-  new_heap = caml_stat_alloc_aligned_noexc(bsz, 0, &new_heap_base);
+  /* TODO: Page_size, may not be 4k, m1 I think is 16kb */
+  new_heap = caml_stat_alloc_aligned_noexc(bsz + Page_size, 0, &new_heap_base);
   if (new_heap == NULL) caml_raise_out_of_memory();
+  /* TODO: this should definitely be under a flag */
+  if (mprotect(new_heap , Page_size, PROT_NONE) == -1)
+    caml_raise_out_of_memory();
+  /* TODO: this is a bad idea, free() will fail */
+  new_heap += Page_size;
   if (caml_page_table_add(In_young, new_heap, new_heap + bsz) != 0)
     caml_raise_out_of_memory();
 

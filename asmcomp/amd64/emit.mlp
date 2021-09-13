@@ -273,12 +273,6 @@ type gc_call =
 
 let call_gc_sites = ref ([] : gc_call list)
 
-let emit_call_gc gc =
-  def_label gc.gc_lbl;
-  emit_call "caml_call_gc";
-  def_label gc.gc_frame;
-  I.jmp (label gc.gc_return_lbl)
-
 (* Record calls to caml_ml_array_bound_error.
    In -g mode we maintain one call to
    caml_ml_array_bound_error per bound check site.  Without -g, we can share
@@ -623,18 +617,17 @@ let emit_instr fallthrough i =
       assert (n <= (Config.max_young_wosize + 1) * Arch.size_addr);
       if !fastcode_flag then begin
         I.sub (int n) r15;
-        I.cmp (domain_field Domainstate.Domain_young_limit) r15;
         let lbl_call_gc = new_label() in
         let lbl_frame =
           record_frame_label i.live (Dbg_alloc dbginfo)
         in
-        I.jb (label lbl_call_gc);
-        let lbl_after_alloc = new_label() in
-        def_label lbl_after_alloc;
+        I.test (mem64 NONE 0 R15) rax;
+        def_label lbl_frame;
         I.lea (mem64 NONE 8 R15) (res i 0);
+        (* TODO: can we remove the frametable too? *)
         call_gc_sites :=
           { gc_lbl = lbl_call_gc;
-            gc_return_lbl = lbl_after_alloc;
+            gc_return_lbl = lbl_frame;
             gc_frame = lbl_frame; } :: !call_gc_sites
       end else begin
         begin match n with
@@ -889,7 +882,6 @@ let fundecl fundecl =
   emit_debug_info fundecl.fun_dbg;
   cfi_startproc ();
   emit_all true fundecl.fun_body;
-  List.iter emit_call_gc !call_gc_sites;
   emit_call_bound_errors ();
   if !frame_required then begin
     let n = frame_size() - 8 - (if fp then 8 else 0) in
