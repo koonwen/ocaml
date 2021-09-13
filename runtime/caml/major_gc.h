@@ -21,6 +21,69 @@
 #include "freelist.h"
 #include "misc.h"
 
+// TODO: what should be part of the heap state?
+typedef struct caml_major_heap_state {
+  // TODO: confirm this
+  /* how much of the heap is free at the end */
+  uintnat percent_free;
+  // TODO: understand this
+  uintnat major_heap_increment; 
+  // TODO: find better description
+  /* allocated by caml_alloc_for_heap, points to the first heap_chunk */
+  CAMLexport char *heap_start;
+  // TOOD: proper understand this
+  /* I assume this is a sweep heap which will be used to hold values temporarily */
+  char *gc_sweep_hp;
+  /* always Phase_mark, Pase_clean, Phase_sweep, or Phase_idle */
+  int gc_phase;
+  // TODO: confirm this
+  /* number of allocated words in this heap */
+  uintnat allocated_words;
+  // TODO: understand this
+  uintnat dependent_size;
+  // TODO: understand this
+  uintnat dependent_allocated;
+  // TODO: understand this
+  double extra_heap_resources;
+  // TODO: confirm this
+  /* freelist wordsize at phase change */
+  uintnat fl_wsz_at_phase_change;
+  // TODO: caml_fl_merge
+  /* redarken_first_chunk is the first chunk needing redarkening, if NULL no
+  redarkening required */
+  char* redarken_first_chunk;
+  // TODO: confirm this
+  /* Start of memory to be swept */
+  char* sweep_chunk;
+  // TODO: confirm this
+  /* End of memory to be swept */
+  char* sweep_limit;
+  // TODO: understand this
+  double p_backlog;
+
+  /* Subphase_{mark_roots,mark_main,mark_final} */
+  int gc_subphase;
+
+  int major_window;
+  double major_ring[Max_major_window];
+  int major_ring_index;
+  double major_work_credit;
+  double gc_clock;
+
+
+  int ephe_list_pure;
+  /** The ephemerons is pure if since the start of its iteration
+      no value have been darkened. */
+  value *ephes_checked_if_pure;
+  value *ephes_to_check;
+
+  void (*major_gc_hook)(void);
+
+  #ifdef DEBUG
+  unsigned long major_gc_counter;
+  #endif
+} caml_major_heap_state;
+
 typedef struct {
   void *block;           /* address of the malloced block this chunk lives in */
   asize_t alloc;         /* in bytes, used for compaction */

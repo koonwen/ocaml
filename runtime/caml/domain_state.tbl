@@ -87,5 +87,6 @@ DOMAIN_STATE(FILE*, eventlog_out)
 
 #if defined(NAKED_POINTERS_CHECKER) && !defined(_WIN32)
 DOMAIN_STATE(void*, checking_pointer_pc)
-/* See major_gc.c */
 #endif
+/* See major_gc.c */
+// DOMAIN_STATE(struct caml_major_heap_state *, major_state)
