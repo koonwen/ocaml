@@ -2230,9 +2230,14 @@ let is_prim ~name funct =
 
 let rec approx_type env sty =
   match sty.ptyp_desc with
-    Ptyp_arrow (p, _, sty) ->
-      let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
-      newty (Tarrow (p, ty1, approx_type env sty, Cok))
+    Ptyp_arrow (n, nty, sty) ->
+      let nty' = if is_optional n then type_option (newvar ()) else newvar () in
+
+      begin try unify env nty' (approx_type env nty) with Unify trace ->
+        (* TODO: which type clash should I use?*)
+        raise(Error(nty.ptyp_loc, env, Expr_type_clash (trace, None, None)))
+      end;
+      newty (Tarrow (n, nty', approx_type env sty, Cok))
   | Ptyp_tuple args ->
       newty (Ttuple (List.map (approx_type env) args))
   | Ptyp_constr (lid, ctl) ->
@@ -2246,18 +2251,41 @@ let rec approx_type env sty =
       approx_type env sty
   | _ -> newvar ()
 
+let approx_pattern env pat =
+  match pat.ppat_desc with
+  | Ppat_constraint (_, sty) ->
+    let ty = approx_type env sty in
+    ty
+  | _ -> newvar ()
+
+(** TODO: write better docs *)
+(*
+  this function is used for approximating the types for let recursion,
+  because of GADTs we need to stop when an expression can introduce an
+  existentional type, so if ntys <> 0, pattern matchings will be ignored,
+  because of doubts I disabled it on any branching
+  
+  if that case is not treated it could introduce fake type clashes making
+  it a regression, so the ntys parameter was added *)
+let newtypes = ref []
+
 let rec type_approx env sexp =
   match sexp.pexp_desc with
-    Pexp_let (_, _, e) -> type_approx env e
-  | Pexp_fun (p, _, _, e) ->
-      let ty = if is_optional p then type_option (newvar ()) else newvar () in
-      newty (Tarrow(p, ty, type_approx env e, Cok))
-  | Pexp_function ({pc_rhs=e}::_) ->
+    Pexp_let (_, _, e) when !newtypes = [] -> type_approx env e
+  | Pexp_fun (l, _, pat, e) ->
+      let ty = if is_optional l then type_option (newvar ()) else newvar () in
+      let pat_ty = approx_pattern env pat in
+      begin try unify env ty pat_ty with Unify trace ->
+        (* TODO: which type clash should I use?*)
+        raise(Error(sexp.pexp_loc, env, Pattern_type_clash (trace, None)))
+      end;
+      newty (Tarrow(l, ty, type_approx env e, Cok))
+  | Pexp_function ({pc_rhs=e}::_) when !newtypes = [] ->
       newty (Tarrow(Nolabel, newvar (), type_approx env e, Cok))
-  | Pexp_match (_, {pc_rhs=e}::_) -> type_approx env e
-  | Pexp_try (e, _) -> type_approx env e
+  | Pexp_match (_, {pc_rhs=e}::_) when !newtypes = [] -> type_approx env e
+  | Pexp_try (e, _) when !newtypes = [] -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple(List.map (type_approx env) l))
-  | Pexp_ifthenelse (_,e,_) -> type_approx env e
+  | Pexp_ifthenelse (_,e,_) when !newtypes = [] -> type_approx env e
   | Pexp_sequence (_,e) -> type_approx env e
   | Pexp_constraint (e, sty) ->
       let ty = type_approx env e in
@@ -2266,6 +2294,7 @@ let rec type_approx env sexp =
         raise(Error(sexp.pexp_loc, env, Expr_type_clash (trace, None, None)))
       end;
       ty1
+  (* TODO: can this work with newtypes presents *)
   | Pexp_coerce (e, sty1, sty2) ->
       let approx_ty_opt = function
         | None -> newvar ()
@@ -2278,7 +2307,67 @@ let rec type_approx env sexp =
         raise(Error(sexp.pexp_loc, env, Expr_type_clash (trace, None, None)))
       end;
       ty2
+  | Pexp_newtype({txt=name}, sbody) ->
+      let ty =
+        if Typetexp.valid_tyvar_name name then
+          newvar ~name ()
+        else
+          newvar ()
+      in
+      newtypes := ty :: !newtypes;
+
+      (* remember original level *)
+      begin_def ();
+      (* Create a fake abstract type declaration for name. *)
+      let decl = {
+        type_params = [];
+        type_arity = 0;
+        type_kind = Type_abstract;
+        type_private = Public;
+        type_manifest = None;
+        type_variance = [];
+        type_separability = [];
+        type_is_newtype = true;
+        type_expansion_scope = Btype.lowest_level;
+        type_loc = sexp.pexp_loc;
+        type_attributes = [];
+        type_immediate = Unknown;
+        type_unboxed = unboxed_false_default_false;
+        type_uid = Uid.mk ~current_unit:(Env.get_unit_name ());
+      }
+      in
+      let scope = create_scope () in
+      let (id, new_env) = Env.enter_type ~scope name decl env in
+      (* TODO: this is cursed, I'm sorry *)
+      let _ = Env.lookup_type ~loc:Location.none (Lident name) new_env in
+      let sbody_ty = type_approx new_env sbody in
+      (* Replace every instance of this type constructor in the resulting
+          type. *)
+      let seen = Hashtbl.create 8 in
+      let rec replace t =
+        if Hashtbl.mem seen t.id then ()
+        else begin
+          Hashtbl.add seen t.id ();
+          match t.desc with
+          | Tconstr (Path.Pident id', _, _) when id == id' -> link_type t ty
+          | _ -> Btype.iter_type_expr replace t
+        end
+      in
+      let ety = Subst.type_expr Subst.identity sbody_ty in
+      replace ety;
+      (* back to original level *)
+      end_def ();
+      (* lower the levels of the result type *)
+      (* unify_var env ty ety; *)
+      (* non-expansive if the body is non-expansive, so we don't introduce
+          any new extra node in the typed AST. *)
+      ety
   | _ -> newvar ()
+
+let type_approx env sexpr =
+  newtypes := [];
+  let ty = type_approx env sexpr in
+  (ty, !newtypes)
 
 (* List labels in a function type, and whether return type is a variable *)
 let rec list_labels_aux env visited ls ty_fun =
@@ -4827,8 +4916,20 @@ and type_let
           | Tpoly (ty, tl) ->
               {pat with pat_type =
                snd (instance_poly ~keep_names:true false tl ty)}
-          | _ -> pat
-        in unify_pat (ref env) pat (type_approx env binding.pvb_expr))
+          | _ -> pat in
+          begin_def ();
+        let (approx, tyl) = type_approx env binding.pvb_expr in
+        unify_pat (ref env) pat approx;
+        List.iter (fun t -> set_level t generic_level) tyl;
+        let rec f = (fun t ->
+          match t.desc with
+          (* TODO: is this even close to being correct? *)
+          | Tvar _ -> ()
+          | _ ->
+            iter_type_expr f t;
+              set_level t generic_level) in
+            iter_type_expr f pat.pat_type;
+        )
       pat_list spat_sexp_list;
   (* Polymorphic variant processing *)
   List.iter
@@ -5589,3 +5690,5 @@ let () =
 let type_expect ?in_function env e ty = type_expect ?in_function env e ty
 let type_exp env e = type_exp env e
 let type_argument env e t1 t2 = type_argument env e t1 t2
+
+let type_approx env sexpr = fst (type_approx env sexpr)
