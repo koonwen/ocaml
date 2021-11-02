@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 
 # esy-build
 #
@@ -6,7 +6,6 @@
 
 set -u
 set -e
-set -o pipefail
 
 case "$(uname -s)" in
     CYGWIN*|MINGW32*|MSYS*)
@@ -21,4 +20,4 @@ case "$(uname -s)" in
 esac
 
 # Common build steps
-make install
+exec make install
