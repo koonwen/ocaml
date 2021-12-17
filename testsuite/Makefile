@@ -218,7 +218,7 @@ parallel-%: lib tools
 	     echo "This target requires GNU parallel.";\
 	     exit 1)
 	@for dir in tests/$**; do echo $$dir; done \
-	 | parallel --gnu --no-notice --keep-order \
+	 | parallel -j8 --gnu --no-notice --keep-order \
 	     "$(MAKE) --no-print-directory exec-one DIR={} 2>&1" \
 	 | tee $(TESTLOG)
 	@$(MAKE) report

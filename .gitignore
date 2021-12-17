@@ -282,3 +282,7 @@ _build
 /yacc/ocamlyacc
 /yacc/version.h
 /yacc/.gdb_history
+
+target
+_esy
+*.esy.lock

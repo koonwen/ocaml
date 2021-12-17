@@ -729,3 +729,25 @@ Error: This pattern matches values of type GADT_ordering.point
        This instance of GADT_ordering.point is ambiguous:
        it would escape the scope of its equation
 |}];;
+
+module Let_forall_recursive = struct
+  type _ number =
+    | Int : int -> int number
+    | Float : float -> float number
+    | Link : 'a number -> 'a number
+  let rec eval (type a) (arith : a number) : a =
+    match arith with
+    | Int i -> i
+    | Float f -> f
+    | Link n -> eval n
+end
+[%%expect{|
+module Let_forall_recursive :
+  sig
+    type _ number =
+        Int : int -> int number
+      | Float : float -> float number
+      | Link : 'a number -> 'a number
+    val eval : 'a number -> 'a
+  end
+|}];;
