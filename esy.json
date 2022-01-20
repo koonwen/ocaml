@@ -1,0 +1,11 @@
+{
+  "name": "ocaml-development",
+  "dependencies": {
+    "ocaml": "4.13.x",
+    "@opam/dune": "*",
+    "@opam/ocaml-lsp-server": "*"
+  },
+  "resolutions": {
+    "ocaml": "esy-ocaml/ocaml#2115efce6eb4a5963e8d3693d3e408abe384f724"
+  }
+}
