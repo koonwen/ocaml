@@ -264,6 +264,7 @@ let destroyed_at_c_call =
 
 let destroyed_at_oper = function
   | Iop(Icall_ind | Icall_imm _) | Iop(Iextcall { alloc = true; }) ->
+    (* TODO: why (Iextcall { alloc = true }) burns all_phys_regs? *)
       all_phys_regs
   | Iop(Iextcall { alloc = false; }) ->
       destroyed_at_c_call

@@ -127,6 +127,7 @@
 #define Handler_parent          24
 
 /* struct c_stack_link */
+#define Sizeof_cstack           24
 #define Cstack_stack             0
 #define Cstack_sp                8
 #define Cstack_prev             16
@@ -491,6 +492,7 @@ LBL(caml_call_gc):
         SWITCH_OCAML_TO_C
         C_call (GCALL(caml_garbage_collection))
         SWITCH_C_TO_OCAML
+        /* TODO: is this loading needed? */
         movq    Caml_state(gc_regs), %r15
         RESTORE_ALL_REGS
         ret
@@ -565,6 +567,7 @@ CFI_STARTPROC
         C arguments         : %rdi, %rsi, %rdx, %rcx, %r8, and %r9
         C function          : %rax
         C stack args        : begin=%r13 end=%r12 */
+    /* TODO: why not just pass the length and use the stack pointer? */
     /* Switch from OCaml to C */
         SWITCH_OCAML_TO_C
     /* we use %rbp (otherwise unused) to enable backtraces */
@@ -647,6 +650,7 @@ LBL(caml_start_program):
         movq    %r11, 0(%r10)
         movq    %r10, Caml_state(exn_handler)
     /* Switch stacks and call the OCaml code */
+    /* TODO: this could use a single register like %r11 */
         movq    %r10, %rsp
 #ifdef ASM_CFI_SUPPORTED
         CFI_REMEMBER_STATE
@@ -706,6 +710,7 @@ LBL(caml_raise_exn):
         testq   $1, Caml_state(backtrace_active)
         jne   LBL(116)
         RESTORE_EXN_HANDLER_OCAML
+        /* TODO: return to a different pointer is SLOW */
         ret
 LBL(116):
         movq    $0, Caml_state(backtrace_pos)
@@ -720,6 +725,7 @@ LBL(117):
                                   /* arg 4: sp of handler */
         C_call  (GCALL(caml_stash_backtrace))
         movq    %r12, %rax        /* Recover exception bucket */
+        /* TODO: should this be a jump to the the previous RESTORE_EXN_HANDLER? */
         RESTORE_EXN_HANDLER_OCAML
         ret
 CFI_ENDPROC
